@@ -65,10 +65,11 @@ pre{white-space:pre-wrap;font-size:12.5px;background:var(--bg);padding:10px;bord
   try { $('#url').value = localStorage.getItem('gdpo-carga-url') || ''; } catch (e) {}
   function pedir(url, cuerpo) {
     var t0 = performance.now();
-    return fetch(url, { method: 'POST', body: JSON.stringify(cuerpo), headers: { 'Content-Type': 'text/plain;charset=utf-8' } })
-      .then(function (r) { return r.json(); })
+    var ctl = new AbortController(), reloj = setTimeout(function () { ctl.abort(); }, 40000);   // un pedido colgado no frena la prueba
+    return fetch(url, { method: 'POST', body: JSON.stringify(cuerpo), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, signal: ctl.signal })
+      .then(function (r) { clearTimeout(reloj); return r.json(); })
       .then(function (j) { return { ms: performance.now() - t0, ok: !!j.ok, err: j.error, bloqueo: j.bloqueo }; })
-      .catch(function (e) { return { ms: performance.now() - t0, ok: false, err: 'red' }; });
+      .catch(function (e) { return { ms: performance.now() - t0, ok: false, err: e && e.name === 'AbortError' ? 'sin respuesta en 40 s' : 'red' }; });
   }
   var espera = function (s) { return new Promise(function (r) { setTimeout(r, s * 1000); }); };
   function pct(a, q) { if (!a.length) return 0; var s = a.slice().sort(function (x, y) { return x - y; }); return s[Math.min(s.length - 1, Math.floor(q * s.length))]; }
