@@ -13,7 +13,8 @@
  *
  * Diseño pensado para 150 a 400 alumnos con carga simultánea:
  *  - Las lecturas salen de CacheService (no tocan la planilla en el 90 % de los casos).
- *  - Las escrituras son una fila por evento y el bloqueo dura sólo lo que tarda esa fila.
+ *  - Las entregas de checkpoint son una fila por evento con appendRow, sin bloqueo global
+ *    (la prueba real con bloqueo trababa todo a partir de ~1,3 entregas por segundo).
  *  - El inicio de cada checkpoint NO escribe en la planilla: queda en caché y firmado.
  *  - Las sesiones son tokens firmados (HMAC): validar una sesión no lee la planilla.
  *
@@ -219,23 +220,19 @@ function entregar_(p) {
   else aprobado = respondidas >= qs.length;            // cápsula: se aprueba al entregar completa
   if (excedido && String(cfg.excedido_desaprueba).toUpperCase() === 'SI') aprobado = false;
 
-  const lock = LockService.getScriptLock();
-  if (!lock.tryLock(CFG.ESPERA_BLOQUEO_MS)) return { ok: false, error: 'ocupado' };
-  try {
-    const prog = progresoAlumno_(s.l);
-    if (prog[clase + '|' + parte]) return { ok: false, error: 'ya_entregado' };
-    const respTxt = JSON.stringify(resp).slice(0, CFG.MAX_CARACTERES);
-    const h = hoja_('Intentos');
-    h.getRange(h.getLastRow() + 1, 1, 1, 13).setValues([[
-      new Date(), s.l, clase, parte, new Date(inicio), segundos, excedido ? 'SI' : 'NO',
-      correctas, cerradas, aprobado ? 'SI' : 'NO', proteger_(respTxt), al.comision, al.grupo
-    ]]);
-    SpreadsheetApp.flush();
-    prog[clase + '|' + parte] = { a: aprobado, s: segundos, x: excedido, c: correctas, t: cerradas };
-    guardarJson_('prog|' + s.l, prog, CFG.TTL_CACHE);
-  } finally {
-    lock.releaseLock();
-  }
+  // Sin bloqueo global: appendRow agrega la fila de forma atómica, así que muchas entregas
+  // pueden escribirse en paralelo. La marca en caché evita el doble envío del mismo alumno.
+  const prog = progresoAlumno_(s.l);
+  const marca = 'env|' + s.l + '|' + clase + '|' + parte;
+  if (prog[clase + '|' + parte] || cache.get(marca)) return { ok: false, error: 'ya_entregado' };
+  cache.put(marca, '1', 120);
+  const respTxt = JSON.stringify(resp).slice(0, CFG.MAX_CARACTERES);
+  hoja_('Intentos').appendRow([
+    new Date(), s.l, clase, parte, new Date(inicio), segundos, excedido ? 'SI' : 'NO',
+    correctas, cerradas, aprobado ? 'SI' : 'NO', proteger_(respTxt), al.comision, al.grupo
+  ]);
+  prog[clase + '|' + parte] = { a: aprobado, s: segundos, x: excedido, c: correctas, t: cerradas };
+  guardarJson_('prog|' + s.l, prog, CFG.TTL_CACHE);
   cache.remove('ini|' + s.l + '|' + clase + '|' + parte);
   return { ok: true, aprobado: aprobado, correctas: correctas, total: cerradas, segundos: segundos, excedido: excedido };
 }
@@ -463,7 +460,7 @@ function docNota_(p) {
 
 /* =========================================================
    PRUEBA DE CARGA (sólo con prueba_carga = SI en Config)
-   Simula exactamente el costo de una entrega: fila nueva bajo bloqueo + lectura de caché.
+   Simula exactamente el costo de una entrega: una fila nueva con appendRow, sin bloqueo.
    ========================================================= */
 
 function carga_(p) {
@@ -475,18 +472,9 @@ function carga_(p) {
     cronograma_();
     return { ok: true, ms: Date.now() - t0 };
   }
-  const lock = LockService.getScriptLock();
-  if (!lock.tryLock(CFG.ESPERA_BLOQUEO_MS)) return { ok: false, error: 'ocupado', ms: Date.now() - t0 };
-  let enBloqueo;
-  try {
-    const t1 = Date.now();
-    const h = hoja_('Carga');
-    h.getRange(h.getLastRow() + 1, 1, 1, 3).setValues([[new Date(), quien, String(p.dato || '').slice(0, 500)]]);
-    SpreadsheetApp.flush();
-    enBloqueo = Date.now() - t1;
-  } finally {
-    lock.releaseLock();
-  }
+  const t1 = Date.now();
+  hoja_('Carga').appendRow([new Date(), quien, String(p.dato || '').slice(0, 500)]);
+  const enBloqueo = Date.now() - t1;
   return { ok: true, ms: Date.now() - t0, bloqueo: enBloqueo };
 }
 

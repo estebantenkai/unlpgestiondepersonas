@@ -74,6 +74,7 @@ function crearEntornoGAS(opciones) {
   /* ---------- Planilla ---------- */
   function Hoja(nombre) { this.nombre = nombre; this.filas = []; }
   Hoja.prototype.getLastRow = function () { return this.filas.length; };
+  Hoja.prototype.appendRow = function (f) { this.filas.push(f.slice()); return this; };
   Hoja.prototype.setFrozenRows = function () {};
   Hoja.prototype.setName = function (n) { this.nombre = n; };
   Hoja.prototype.getRange = function (r, c, nr, nc) {
