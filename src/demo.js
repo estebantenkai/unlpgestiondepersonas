@@ -18,6 +18,7 @@
   var CODIGO = window.CODIGO_BACKEND;
   var C = window.CONTENIDO;
   var env, B;
+  var PREG = {}; C.filasPreguntas().forEach(function (f) { (PREG[f[0] + '|' + f[1]] = PREG[f[0] + '|' + f[1]] || []).push(f); });
   var demo = { alumnoDemo: { mail: 'camila.rossi@alu.econo.unlp.edu.ar', legajo: '41287/3', dni: '40111222' } };
 
   function rnd(seed) { var s = seed % 2147483647; if (s <= 0) s += 2147483646; return function () { s = s * 16807 % 2147483647; return (s - 1) / 2147483646; }; }
@@ -61,10 +62,13 @@
           var ts = abre + r() * (tope - abre) * 0.9;
           var seg = Math.round(Math.exp(Math.log(parte === 'teorico' ? 330 : 420) + (r() + r() + r() - 1.5) * 0.75));
           var x = seg > 600;
-          var corr = parte === 'teorico' ? (function () { var z = r(); return z < 0.47 ? 3 : z < 0.83 ? 2 : z < 0.96 ? 1 : 0; })() : 0;
-          var apr = parte === 'teorico' ? corr >= 2 : r() < 0.97;
-          if (esDemo) { apr = true; x = false; seg = Math.min(seg, 540); if (parte === 'teorico') corr = Math.max(corr, 2); }
-          intentos.push([ts, [new Date(ts), a[0], c[0], parte, new Date(ts - seg * 1000), seg, x ? 'SI' : 'NO', corr, parte === 'teorico' ? 3 : 0, apr ? 'SI' : 'NO', '{}', a[5], a[6]]]);
+          var z = r(), corr = z < 0.47 ? 3 : z < 0.83 ? 2 : z < 0.96 ? 1 : 0;
+          if (esDemo) { x = false; seg = Math.min(seg, 540); corr = Math.max(corr, 2); }
+          var apr = corr >= 2;
+          // respuestas coherentes con la cantidad de correctas, para que la corrección se vea completa
+          var qs = PREG[c[0] + '|' + parte] || [], resp = {};
+          qs.forEach(function (q, k) { resp[q[2]] = k < corr ? String(q[6]) : String((Number(q[6]) + 1) % q[5].split('|').length); });
+          intentos.push([ts, [new Date(ts), a[0], c[0], parte, new Date(ts - seg * 1000), seg, x ? 'SI' : 'NO', corr, qs.length || 3, apr ? 'SI' : 'NO', JSON.stringify(resp), a[5], a[6]]]);
         });
       });
     });

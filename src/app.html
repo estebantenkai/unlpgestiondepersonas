@@ -142,6 +142,32 @@ main{padding-block:24px 72px}
 .opt input{margin:4px 0 0;accent-color:var(--brand)}
 textarea.inp{min-height:110px;resize:vertical;line-height:1.5}
 .res{text-align:center;padding:34px 20px}
+/* corrección */
+.corr{margin-top:22px;text-align:left}
+.corr .q{padding:14px 16px;border:1px solid var(--rule);border-radius:6px;background:var(--paper);margin-bottom:12px}
+.corr .q > p{display:flex;gap:8px;align-items:flex-start}
+.opt.c-ok{border-color:var(--ok);background:var(--ok-soft)} .opt.c-no{border-color:var(--no);background:var(--no-soft)}
+.opt.ro{cursor:default}
+.opt .tag{font:600 10px var(--f-mono);letter-spacing:.07em;text-transform:uppercase;margin-left:6px;white-space:nowrap}
+.opt.c-ok .tag{color:var(--ok)} .opt.c-no .tag{color:var(--no)}
+/* bienvenida */
+.guia{margin-bottom:22px}
+.guia summary{cursor:pointer;list-style:none;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.guia summary::-webkit-details-marker{display:none}
+.guia summary::after{content:"Mostrar";font:600 12px var(--f-body);color:var(--brand)}
+.guia[open] summary::after{content:"Ocultar"}
+.guia-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--rule)}
+.guia-cols > div{padding:16px 20px}
+.guia-cols > div + div{border-left:1px solid var(--rule)}
+.guia-cols h3{font-size:15px;margin:6px 0 6px}
+.guia-cols p,.guia-cols li{font-size:13.5px;color:var(--sub)}
+.equipo{list-style:none;margin:8px 0 0;padding:0}
+.equipo li{padding:5px 0;border-top:1px solid var(--rule-2);display:flex;flex-direction:column}
+.equipo li:first-child{border-top:0}
+.equipo b{color:var(--ink);font-weight:600}
+.paso{display:inline-block;font:600 11px var(--f-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--brand);margin-bottom:6px}
+.capsula-box{border:1px solid var(--brand);background:var(--brand-soft);border-radius:6px;padding:18px 20px;margin:18px 0 0}
+th.ord{cursor:pointer;user-select:none} th.ord:hover{color:var(--ink)} th.ord[aria-sort="ascending"]::after{content:" ▲"} th.ord[aria-sort="descending"]::after{content:" ▼"}
 .res .big{margin:12px 0}
 
 /* TP */
@@ -229,6 +255,7 @@ table.t tr.click:hover td{background:var(--bg)}
   .cl{grid-template-columns:52px minmax(0,1fr)} .cl .partes{grid-column:1/-1}
 }
 @media (max-width:760px){
+  .guia-cols{grid-template-columns:minmax(0,1fr)} .guia-cols > div + div{border-left:0;border-top:1px solid var(--rule)}
   #v-ingreso{grid-template-columns:minmax(0,1fr)}
   .ing-brand{padding:32px 20px;gap:24px}
   .sum{grid-template-columns:minmax(0,1fr)} .sum > div + div{border-left:0;border-top:1px solid var(--rule)}
@@ -261,14 +288,14 @@ table.t tr.click:hover td{background:var(--bg)}
       </div>
       <form id="f-al" novalidate>
         <div class="field"><label for="in-mail">Correo institucional</label><input id="in-mail" type="email" autocomplete="email" required><span class="hint">El mismo con el que te inscribiste en la materia.</span></div>
-        <div class="field"><label for="in-leg">Legajo</label><input id="in-leg" class="mono" autocomplete="off" required></div>
-        <div class="field"><label for="in-dni">DNI</label><input id="in-dni" class="mono" inputmode="numeric" autocomplete="off" required></div>
+        <div class="field"><label for="in-leg">Legajo</label><input id="in-leg" class="mono" autocomplete="off" required><span class="hint">Con la barra, por ejemplo 41287/3.</span></div>
         <button class="btn" style="width:100%;margin-top:4px">Entrar</button>
         <p class="err" id="err-al" hidden></p>
       </form>
       <form id="f-doc" hidden novalidate>
         <div class="field"><label for="d-mail">Correo docente</label><input id="d-mail" type="email" autocomplete="email"></div>
-        <div class="field"><label for="d-clave">Clave personal</label><input id="d-clave" type="password" autocomplete="current-password"></div>
+        <div class="field"><label for="d-clave">Clave docente</label><input id="d-clave" type="password" autocomplete="current-password"></div>
+        <span class="hint xs faint" style="display:block;margin:-6px 0 12px">La misma para todo el equipo docente. Si no la tenés, pedísela a la coordinación de la cátedra.</span>
         <button class="btn" style="width:100%;margin-top:4px">Entrar al tablero</button>
         <p class="err" id="err-doc" hidden></p>
       </form>
@@ -331,8 +358,8 @@ function sincronizar(msServidor) { if (msServidor) reloj.desfase = msServidor - 
 
 /* ---------- API ---------- */
 var ERRORES = {
-  acceso: 'Los datos no coinciden con el padrón. Revisá correo, legajo y DNI; si siguen sin funcionar, escribile a tu docente de prácticos.',
-  datos: 'Completá todos los campos.', sesion: 'Tu sesión venció. Volvé a entrar.', ocupado: 'Hay mucha gente entregando en este momento. Probá de nuevo en unos segundos.',
+  acceso: 'El correo y el legajo no coinciden con el padrón. Revisalos (el legajo va con la barra); si siguen sin funcionar, escribile a tu docente de prácticos.',
+  datos: 'Completá el correo y el legajo.', sesion: 'Tu sesión venció. Volvé a entrar.', ocupado: 'Hay mucha gente entregando en este momento. Probá de nuevo en unos segundos.',
   no_abierta: 'Esta actividad todavía no está habilitada.', cerrada: 'Esta actividad ya cerró.', ya_entregado: 'Ya entregaste esta actividad.',
   final: 'El grupo ya hizo la entrega final; el TP quedó cerrado.', sin_grupo: 'Todavía no tenés grupo asignado. Consultá con tu docente de prácticos.',
   red: 'No hay conexión con el servidor. Tus respuestas siguen guardadas en este dispositivo; probá de nuevo.', servidor: 'El servidor tuvo un problema. Probá de nuevo en un momento.'
@@ -372,11 +399,11 @@ $$('.tabs button').forEach(function (b) {
 $('#f-al').onsubmit = function (e) {
   e.preventDefault();
   var btn = e.submitter || $('button', this); btn.disabled = true;
-  api('ingresar', { mail: $('#in-mail').value, legajo: $('#in-leg').value, dni: $('#in-dni').value }).then(function (r) {
+  api('ingresar', { mail: $('#in-mail').value, legajo: $('#in-leg').value }).then(function (r) {
     btn.disabled = false;
     if (!r.ok) { $('#err-al').hidden = false; $('#err-al').textContent = msgError(r); return; }
     $('#err-al').hidden = true;
-    S = { rol: 'al', token: r.token, cred: DEMO ? { mail: $('#in-mail').value, legajo: $('#in-leg').value, dni: $('#in-dni').value } : null };
+    S = { rol: 'al', token: r.token, cred: DEMO ? { mail: $('#in-mail').value, legajo: $('#in-leg').value } : null };
     guardarSesion(); entrarAlumno(r);
   });
 };
@@ -387,7 +414,7 @@ $('#f-doc').onsubmit = function (e) {
     btn.disabled = false;
     if (!r.ok) { $('#err-doc').hidden = false; $('#err-doc').textContent = r.error === 'acceso' ? 'Correo o clave incorrectos.' : msgError(r); return; }
     $('#err-doc').hidden = true;
-    S = { rol: 'doc', token: r.token, yo: r.yo, cred: DEMO ? { mail: $('#d-mail').value, clave: $('#d-clave').value } : null };
+    S = { rol: 'doc', token: r.token, yo: r.yo, manual: r.manual || '', cred: DEMO ? { mail: $('#d-mail').value, clave: $('#d-clave').value } : null };
     guardarSesion(); entrarDocente();
   });
 };
@@ -430,12 +457,27 @@ function condicion(apr, posibles, R) {
   return ['no', 'No llegás al mínimo de checkpoints'];
 }
 
+function guiaHtml() {
+  var vista = lsGet('gdpo-guia|' + E.yo.legajo);
+  var eq = (E.yo.equipo || []);
+  var equipo = !E.yo.grupo ? '<p>Todavía no tenés grupo asignado. Lo arma la cátedra; cuando esté, vas a ver acá a tus compañeros.</p>'
+    : '<ul class="equipo">' + eq.map(function (x) {
+        return '<li><b>' + esc(x.nombre) + (x.yo ? ' (vos)' : '') + '</b>' + (x.yo ? '<span class="xs">' + esc(x.mail) + '</span>' : '<a class="xs" href="mailto:' + esc(x.mail) + '">' + esc(x.mail) + '</a>') + '</li>';
+      }).join('') + '</ul>';
+  return '<details class="card guia" id="guia"' + (vista ? '' : ' open') + '><summary><div><p class="label">Cómo funciona la bitácora</p><p class="sm" style="margin-top:4px">Hola, ' + esc(E.yo.nombre) + '. La bitácora tiene dos espacios: uno individual y uno grupal.</p></div></summary>' +
+    '<div class="guia-cols">' +
+    '<div><span class="paso">1 · Espacio individual</span><h3>Checkpoints por clase</h3><p>Se habilitan clase por clase, el día de cada clase. Cada uno tiene un <b>teórico</b> y una <b>cápsula</b> (un video o podcast con preguntas). Sólo vos trabajás acá, con un solo intento por parte. Después de entregar ves qué respondiste bien y qué no.</p></div>' +
+    '<div><span class="paso">2 · Espacio grupal</span><h3>Trabajo práctico</h3><p>Es un documento compartido con tu grupo. <b>Todos pueden escribir a la vez</b>: lo que escribe cada uno se guarda solo y le aparece al resto en menos de un minuto. Las entregas se habilitan con cada clase y al final generan juntos el PDF.</p></div>' +
+    '<div><span class="paso">Tu grupo' + (E.yo.grupo ? ' · ' + esc(E.yo.grupo) : '') + '</span>' + equipo + (E.yo.grupo ? '<p class="xs" style="margin-top:8px">Escribiles para organizarse. Los grupos los arma la cátedra.</p>' : '') + '</div>' +
+    '</div></details>';
+}
 function renderAlumno() {
   var m = $('#main');
-  m.innerHTML = '<nav class="ntabs" role="tablist">' +
+  m.innerHTML = guiaHtml() + '<nav class="ntabs" role="tablist">' +
     '<button role="tab" data-v="checkpoints" aria-selected="' + (vistaAl === 'checkpoints') + '">Checkpoints por clase</button>' +
     '<button role="tab" data-v="tp" aria-selected="' + (vistaAl === 'tp') + '">TP grupal' + (E.yo.grupo ? ' · Grupo ' + esc(E.yo.grupo) : '') + '</button></nav><div id="al-body"></div>';
   $$('.ntabs button', m).forEach(function (b) { b.onclick = function () { vistaAl = b.dataset.v; renderAlumno(); }; });
+  $('#guia').addEventListener('toggle', function () { if (!this.open) lsSet('gdpo-guia|' + E.yo.legajo, '1'); else lsDel('gdpo-guia|' + E.yo.legajo); });
   if (vistaAl === 'tp') renderTP(); else { detenerSondeo(); renderCheckpoints(); }
 }
 
@@ -460,6 +502,7 @@ function renderCheckpoints() {
     '<div class="meter" aria-hidden="true">' + meter + '</div>' +
     '<p class="sm"><span class="st ' + cond[0] + '">' + esc(cond[1]) + '</span></p>' +
     '<p class="xs sub" style="margin-top:8px">Promoción: ' + R.promocion + ' clases aprobadas (teórico y cápsula). Final: ' + R.regular + '. No hace falta aprobar una clase para hacer la siguiente.</p>' +
+    (R.verCorrectas !== 'NO' && Object.keys(E.progreso).length ? '<p style="margin-top:12px"><button class="btn line sm" id="dl-aprend">Descargar mis respuestas corregidas</button></p>' : '') +
     '</div><div class="next">' + nextHtml + '</div></div>';
 
   html += '<div class="clases">';
@@ -479,13 +522,16 @@ function renderCheckpoints() {
   html += '</div>';
   $('#al-body').innerHTML = html;
   $$('[data-hacer]').forEach(function (b) { b.onclick = function () { abrirActividad(b.dataset.c, b.dataset.hacer); }; });
+  $$('[data-rev]').forEach(function (b) { b.onclick = function () { verCorreccion(b.dataset.c, b.dataset.rev); }; });
+  if ($('#dl-aprend')) $('#dl-aprend').onclick = descargarAprendizajes;
   if ($('#go-next')) $('#go-next').onclick = function () { var c = prox[0]; abrirActividad(c.clase, E.progreso[c.clase + '|teorico'] ? 'capsula' : 'teorico'); };
 }
 function piezaHtml(c, parte, titulo, e) {
   var a, m;
   if (e.k === 'ok' || e.k === 'no') {
     a = '<span class="st ' + e.k + '">' + (e.k === 'ok' ? 'Aprobado' : 'Desaprobado') + '</span>';
-    m = (parte === 'teorico' ? e.p.c + ' de ' + e.p.t + ' correctas · ' : 'Entregada · ') + mins(e.p.s) + (e.p.x ? ' · <span style="color:var(--today)">pasó los ' + E.reglas.minutos + ' min sugeridos</span>' : '');
+    m = (e.p.t ? e.p.c + ' de ' + e.p.t + ' correctas · ' : 'Entregada · ') + mins(e.p.s) + (e.p.x ? ' · <span style="color:var(--today)">pasó los ' + E.reglas.minutos + ' min sugeridos</span>' : '') +
+      (E.reglas.verCorrectas !== 'NO' ? ' · <button class="back xs" style="margin:0;font-size:12px" data-c="' + esc(c.clase) + '" data-rev="' + parte + '">Ver corrección</button>' : '');
   } else if (e.k === 'lock') { a = '<span class="st off">Bloqueado</span>'; m = 'Se habilita al terminar el teórico'; }
   else if (e.k === 'vencida') { a = '<span class="st no">No realizado</span>'; m = 'Cerró el ' + dlarga(c.cierra); }
   else { a = '<button class="btn sm" data-c="' + esc(c.clase) + '" data-hacer="' + parte + '">Hacer</button>'; m = E.reglas.minutos + ' min sugeridos · un solo intento'; }
@@ -503,12 +549,13 @@ function abrirActividad(clase, parte) {
   var m = $('#al-body');
   m.innerHTML = '<div class="act"><button class="back" id="volver">← Volver a las clases</button>' +
     '<p class="label">Clase ' + esc(clase) + ' · Unidad ' + esc(c.unidad) + '</p><h2 style="margin-top:6px">' + titulo + ': ' + esc(parte === 'teorico' ? c.tema : (c.capsula_titulo || 'video o podcast')) + '</h2>' +
-    '<div class="aviso"><b>Antes de empezar</b><ul>' +
+    (parte === 'capsula' ? '<div class="capsula-box"><span class="paso">Paso 1</span><h3>Mirá o escuchá la cápsula</h3><p class="sm sub" style="margin:6px 0 12px">Hacelo antes de comenzar: las preguntas son sobre lo que se cuenta ahí.</p>' + capsulaLink(c) + '</div><p class="paso" style="margin-top:22px">Paso 2 · La actividad</p>' : '') +
+    '<div class="aviso"' + (parte === 'capsula' ? ' style="margin-top:6px"' : '') + '><b>Antes de empezar</b><ul>' +
     '<li>Al tocar <b>Comenzar</b> empieza a correr un reloj. El tiempo sugerido es de <b>' + E.reglas.minutos + ' minutos</b>.</li>' +
     '<li>La actividad no se corta si te pasás, pero el tiempo queda registrado' + (E.reglas.excedidoDesaprueba ? ' y <b>pasarte cuenta como desaprobado</b>' : ' y la cátedra puede considerarlo desaprobado') + '.</li>' +
-    (parte === 'teorico' ? '<li>Para aprobar necesitás ' + E.reglas.minimoCorrectas + ' respuestas correctas.</li>' : '<li>Mirá o escuchá la cápsula antes de comenzar. Se aprueba al entregar todas las respuestas.</li>') +
+    '<li>Son preguntas de opción múltiple. Para aprobar necesitás ' + E.reglas.minimoCorrectas + ' respuestas correctas.</li>' +
+    (E.reglas.verCorrectas === 'AL_ENTREGAR' ? '<li>Al entregar vas a ver cuáles respondiste bien y cuál era la correcta.</li>' : '') +
     '<li>Tenés <b>un solo intento</b>. Si se te corta la conexión, tus respuestas quedan guardadas en este dispositivo.</li></ul></div>' +
-    (parte === 'capsula' ? capsulaLink(c) : '') +
     '<button class="btn" id="comenzar">' + (yaEmpezo ? 'Continuar' : 'Comenzar') + '</button></div>';
   $('#volver').onclick = cerrarActividad;
   $('#comenzar').onclick = function () {
@@ -524,8 +571,8 @@ function abrirActividad(clase, parte) {
 }
 function capsulaLink(c) {
   return c.capsula_url
-    ? '<p style="margin-bottom:16px"><a class="btn line" href="' + esc(c.capsula_url) + '" target="_blank" rel="noopener">Abrir la cápsula ↗</a> <span class="xs sub">Se abre en YouTube o Spotify.</span></p>'
-    : '<p class="sm sub" style="margin-bottom:16px">El link a la cápsula se publica antes de la clase. (En esta demo todavía no está cargado.)</p>';
+    ? '<p style="margin-bottom:4px"><a class="btn" href="' + esc(c.capsula_url) + '" target="_blank" rel="noopener">Abrir la cápsula ↗</a> <span class="xs sub">Se abre en YouTube o Spotify, en otra pestaña.</span></p>'
+    : '<p class="sm sub" style="margin-bottom:4px">El link a la cápsula se publica antes de la clase. (Todavía no está cargado.)</p>';
 }
 function renderPreguntas() {
   var bor = {}; try { bor = JSON.parse(lsGet(claveBorrador()) || '{}'); } catch (e) {}
@@ -541,7 +588,7 @@ function renderPreguntas() {
   m.innerHTML = '<div class="act"><button class="back" id="volver">← Volver a las clases</button>' +
     '<p class="label">Clase ' + esc(ACT.clase) + ' · ' + (ACT.parte === 'teorico' ? 'Checkpoint teórico' : 'Cápsula') + '</p>' +
     '<div class="timer" id="timer"><span class="sm">Tiempo</span><span class="bar"><i id="tbar"></i></span><span class="t mono" id="tval">0:00</span></div>' +
-    (ACT.parte === 'capsula' ? capsulaLink(ACT.c) : '') +
+    (ACT.parte === 'capsula' ? '<div class="capsula-box" style="margin:0 0 18px;padding:12px 16px">' + capsulaLink(ACT.c) + '</div>' : '') +
     '<form id="f-act">' + qs + '<div id="confirmar"></div><button class="btn" id="entregar">Entregar</button></form></div>';
   $('#volver').onclick = cerrarActividad;
   $('#f-act').oninput = function () {
@@ -571,7 +618,7 @@ function respuestas() {
 }
 function confirmarEntrega() {
   var r = respuestas();
-  $('#confirmar').innerHTML = '<div class="aviso" style="margin-top:0">' + (r.faltan ? '<b>Te faltan ' + r.faltan + ' respuesta' + (r.faltan > 1 ? 's' : '') + '.</b> ' + (ACT.parte === 'capsula' ? 'La cápsula sólo se aprueba completa. ' : '') : '') +
+  $('#confirmar').innerHTML = '<div class="aviso" style="margin-top:0">' + (r.faltan ? '<b>Te faltan ' + r.faltan + ' respuesta' + (r.faltan > 1 ? 's' : '') + '.</b> Las que no contestes cuentan como incorrectas. ' : '') +
     '¿Entregás? No vas a poder cambiar las respuestas.<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button type="button" class="btn" id="si">Sí, entregar</button><button type="button" class="btn quiet" id="no">Seguir revisando</button></div></div>';
   $('#entregar').hidden = true;
   $('#no').onclick = function () { $('#confirmar').innerHTML = ''; $('#entregar').hidden = false; };
@@ -592,15 +639,72 @@ function mostrarResultado(r) {
   var falta = !E.progreso[ACT.clase + '|' + otra] && ahora() <= ACT.c.cierra;
   $('#al-body').innerHTML = '<div class="act card res">' +
     '<span class="st ' + (r.aprobado ? 'ok' : 'no') + '">' + (r.aprobado ? 'Aprobado' : 'Desaprobado') + '</span>' +
-    (ACT.parte === 'teorico' ? '<p class="big">' + r.correctas + '<small> de ' + r.total + ' correctas</small></p>' : '<p class="big">Entregada</p>') +
+    (r.total ? '<p class="big">' + r.correctas + '<small> de ' + r.total + ' correctas</small></p>' : '<p class="big">Entregada</p>') +
     '<p class="sub">Tiempo: ' + dur(r.segundos) + ' (min:seg)' + (r.excedido ? ', más que los ' + E.reglas.minutos + ' sugeridos. Quedó registrado.' : '.') + '</p>' +
     '<div style="display:flex;gap:8px;justify-content:center;margin-top:22px;flex-wrap:wrap">' +
     (falta ? '<button class="btn" id="r-otra">Hacer ' + (otra === 'capsula' ? 'la cápsula' : 'el teórico') + ' de la clase ' + esc(ACT.clase) + '</button>' : '') +
-    '<button class="btn quiet" id="r-volver">Volver a las clases</button></div></div>';
+    '<button class="btn quiet" id="r-volver">Volver a las clases</button></div>' +
+    (r.correccion ? '<div class="corr"><p class="label" style="margin-bottom:10px">Tus respuestas, corregidas</p>' + correccionHtml(r.correccion) + '</div>'
+      : r.verDesde ? '<p class="sm sub" style="margin-top:18px">Vas a poder ver las respuestas correctas cuando cierre la clase, el ' + dlarga(r.verDesde) + '.</p>' : '') +
+    '</div>';
   $('#r-volver').onclick = cerrarActividad;
   if ($('#r-otra')) $('#r-otra').onclick = function () { abrirActividad(ACT.clase, otra); };
 }
 function cerrarActividad() { clearInterval(timerId); ACT = null; renderAlumno(); }
+
+/* ---------- corrección: ver qué estuvo bien y qué no, y descargarlo ---------- */
+function correccionHtml(det) {
+  return det.map(function (q, i) {
+    var cab = '<p><span class="num">' + (i + 1) + '/' + det.length + '</span><span style="flex:1">' + esc(q.enunciado) + '</span>' +
+      (q.ok === null ? '' : '<span class="st ' + (q.ok ? 'ok' : 'no') + '">' + (q.ok ? 'Bien' : 'Mal') + '</span>') + '</p>';
+    if (q.tipo !== 'opcion') return '<div class="q">' + cab + '<p class="sm">' + esc(q.elegida || 'Sin respuesta') + '</p></div>';
+    var ops = q.opciones.map(function (o, j) {
+      var esC = String(j) === q.correcta, esE = String(j) === q.elegida;
+      var cls = esC ? ' c-ok' : esE ? ' c-no' : '';
+      var tag = esC && esE ? 'Tu respuesta · correcta' : esC ? 'Correcta' : esE ? 'Tu respuesta' : '';
+      return '<div class="opt ro' + cls + '"><span>' + (esC ? '✓' : esE ? '✗' : '') + '</span><span>' + esc(o) + (tag ? '<span class="tag">' + tag + '</span>' : '') + '</span></div>';
+    }).join('');
+    return '<div class="q">' + cab + ops + (q.elegida === '' ? '<p class="xs" style="color:var(--no)">No la respondiste.</p>' : '') + '</div>';
+  }).join('');
+}
+function verCorreccion(clase, parte) {
+  var m = $('#al-body');
+  m.innerHTML = '<div class="act"><div class="card empty">Buscando tus respuestas…</div></div>';
+  api('correcciones', { token: S.token, clase: clase, parte: parte }).then(function (r) {
+    if (!r.ok) { toast(msgError(r)); renderAlumno(); return; }
+    var it = r.items[0];
+    var c = checkpoints().filter(function (x) { return x.clase === clase; })[0] || {};
+    m.innerHTML = '<div class="act"><button class="back" id="volver">← Volver a las clases</button>' +
+      '<p class="label">Clase ' + esc(clase) + ' · ' + (parte === 'teorico' ? 'Checkpoint teórico' : 'Cápsula') + '</p>' +
+      '<h2 style="margin-top:6px">' + esc(parte === 'teorico' ? c.tema || '' : c.capsula_titulo || 'Cápsula') + '</h2>' +
+      (it ? '<p style="margin-top:10px"><span class="st ' + (it.aprobado ? 'ok' : 'no') + '">' + (it.aprobado ? 'Aprobado' : 'Desaprobado') + '</span> <span class="sm sub">' + it.correctas + ' de ' + it.total + ' correctas</span></p><div class="corr">' + correccionHtml(it.detalle) + '</div>'
+        : '<p class="sub" style="margin-top:14px">' + (r.ocultas ? 'Las respuestas correctas se muestran cuando cierra la clase' + (c.cierra ? ', el ' + dlarga(c.cierra) : '') + '.' : 'No encontramos esta entrega.') + '</p>') + '</div>';
+    $('#volver').onclick = cerrarActividad;
+  });
+}
+function descargarAprendizajes() {
+  var b = $('#dl-aprend'); if (b) { b.disabled = true; b.textContent = 'Preparando…'; }
+  api('correcciones', { token: S.token }).then(function (r) {
+    if (b) { b.disabled = false; b.textContent = 'Descargar mis respuestas corregidas'; }
+    if (!r.ok) { toast(msgError(r)); return; }
+    if (!r.items.length) { toast(r.ocultas ? 'Las correcciones se ven cuando cierra cada clase.' : 'Todavía no entregaste ningún checkpoint.'); return; }
+    var orden = function (x) { return (Number(x.clase) || 99) * 2 + (x.parte === 'teorico' ? 0 : 1); };
+    var items = r.items.slice().sort(function (a, b) { return orden(a) - orden(b); });
+    var crono = {}; E.cronograma.forEach(function (c) { crono[c.clase] = c; });
+    $('#print-root').innerHTML = '<p class="pmeta">Gestión y Desarrollo de las Personas en las Organizaciones · FCE · UNLP</p>' +
+      '<h1>Mis respuestas corregidas</h1><p class="pmeta">' + esc(E.yo.nombre + ' ' + E.yo.apellido) + ' · legajo ' + esc(E.yo.legajo) + ' · generado el ' + dlarga(ahora()) + '</p>' +
+      items.map(function (it) {
+        var c = crono[it.clase] || {};
+        return '<h2>Clase ' + esc(it.clase) + ' · ' + (it.parte === 'teorico' ? 'Teórico: ' + esc(c.tema || '') : 'Cápsula: ' + esc(c.capsula_titulo || '')) + '</h2><p class="pmeta">' + (it.aprobado ? 'Aprobado' : 'Desaprobado') + ' · ' + it.correctas + ' de ' + it.total + ' correctas</p>' +
+          it.detalle.map(function (q, i) {
+            var tuya = q.elegida === '' ? 'Sin responder' : (q.opciones[Number(q.elegida)] || q.elegida);
+            return '<p><b>' + (i + 1) + '. ' + esc(q.enunciado) + '</b><br>' + (q.ok ? '✓ ' : '✗ ') + 'Tu respuesta: ' + esc(tuya) + (q.ok ? '' : '<br>Correcta: ' + esc(q.opciones[Number(q.correcta)] || '')) + '</p>';
+          }).join('');
+      }).join('');
+    var t0 = document.title; document.title = 'GDPO - Mis respuestas - ' + E.yo.apellido;
+    window.print(); document.title = t0;
+  });
+}
 
 /* ---------- TP grupal ---------- */
 var TP = { campos: {}, version: 0, sucio: {}, guardando: false, conflictos: {} };
@@ -772,7 +876,18 @@ function imprimirTP(d) {
 /* =====================================================================
    DOCENTES
    ===================================================================== */
-var D = null, vistaDoc = 'resumen', filtro = { com: '', grupo: '', q: '', cond: '' };
+var D = null, vistaDoc = 'resumen', filtro = { com: '', grupo: '', q: '', cond: '', orden: 'apellido', dir: 1 }, ordenG = { k: 'grupo', dir: 1 };
+var ORDEN = {
+  apellido: function (a) { return (a.apellido + ' ' + a.nombre).toLowerCase(); },
+  legajo: function (a) { var m = String(a.legajo).match(/\d+/); return m ? Number(m[0]) : 0; },
+  com: function (a) { return String(a.com).toLowerCase(); },
+  grupo: function (a) { return String(a.grupo || 'zzz'); },
+  apr: function (a) { return a.apr; }
+};
+function ordenar(lista, f, dir) {
+  return lista.slice().sort(function (a, b) { var x = f(a), y = f(b); var c = typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'es', { numeric: true }); return c * dir || ORDEN.apellido(a).localeCompare(ORDEN.apellido(b), 'es'); });
+}
+function thOrd(k, txt, est) { return '<th class="ord" data-ord="' + k + '" aria-sort="' + (est.k === k ? (est.dir > 0 ? 'ascending' : 'descending') : 'none') + '" title="Ordenar">' + txt + '</th>'; }
 function entrarDocente() {
   $('#who').innerHTML = '<b>' + esc(S.yo.nombre) + '</b><br><span class="sub xs">' + esc(S.yo.rol) + ' · ve toda la cátedra</span>';
   show('app'); $('#main').innerHTML = '<div class="card empty">Cargando el tablero…</div>';
@@ -813,7 +928,7 @@ var COND = { promo: ['ok', 'Promoción'], camino: ['brand', 'En camino'], regula
 function renderDocente() {
   var m = $('#main');
   m.innerHTML = '<div class="dhead"><div><p class="label">Tablero de la cátedra</p><h2 style="margin-top:6px">' + D.alumnos.length + ' alumnos · ' + D.grupos.length + ' grupos</h2></div>' +
-    '<div class="sm sub">Actualizado ' + hm(D.r.generado) + ' <button class="btn quiet sm" id="refrescar" style="margin-left:6px">Actualizar</button></div></div>' +
+    '<div class="sm sub">' + (D.r.manual || S.manual ? '<a class="btn line sm" href="' + esc(D.r.manual || S.manual) + '" target="_blank" rel="noopener" style="margin-right:8px">Manual de uso ↗</a>' : '<span class="xs faint" style="margin-right:8px">Manual de uso: próximamente</span>') + 'Actualizado ' + hm(D.r.generado) + ' <button class="btn quiet sm" id="refrescar" style="margin-left:6px">Actualizar</button></div></div>' +
     '<nav class="ntabs" role="tablist">' + [['resumen', 'Resumen'], ['alumnos', 'Alumnos y checkpoints'], ['grupos', 'Grupos y notas del TP'], ['exportar', 'Exportar']].map(function (x) {
       return '<button role="tab" data-v="' + x[0] + '" aria-selected="' + (vistaDoc === x[0]) + '">' + x[1] + '</button>';
     }).join('') + '</nav><div id="doc-body"></div>';
@@ -862,11 +977,13 @@ function opciones(lista, sel, todos) { return '<option value="">' + todos + '</o
 function unicos(f) { var o = {}; D.alumnos.forEach(function (a) { if (f(a)) o[f(a)] = 1; }); return Object.keys(o).sort(); }
 function docAlumnos() {
   var b = $('#doc-body');
-  b.innerHTML = '<div class="tools"><select id="f-com" aria-label="Comisión">' + opciones(unicos(function (a) { return a.com; }), filtro.com, 'Todas las comisiones') + '</select>' +
+  b.innerHTML = '<div class="tools"><select id="f-ord" aria-label="Ordenar por">' + [['apellido', 'Orden: apellido (A-Z)'], ['legajo', 'Orden: legajo'], ['com', 'Orden: comisión / turno'], ['grupo', 'Orden: grupo'], ['apr', 'Orden: clases aprobadas']].map(function (o) { return '<option value="' + o[0] + '"' + (filtro.orden === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
+    '<select id="f-com" aria-label="Comisión o turno">' + opciones(unicos(function (a) { return a.com; }), filtro.com, 'Todas las comisiones / turnos') + '</select>' +
     '<select id="f-grupo" aria-label="Grupo">' + opciones(unicos(function (a) { return a.grupo; }), filtro.grupo, 'Todos los grupos') + '</select>' +
     '<input class="search" id="f-q" placeholder="Buscar por apellido o legajo" value="' + esc(filtro.q) + '">' +
     Object.keys(COND).map(function (k) { return '<button class="chip" data-cond="' + k + '" aria-pressed="' + (filtro.cond === k) + '">' + COND[k][1] + '</button>'; }).join('') + '</div><div id="tabla"></div>';
   $('#f-com').onchange = function () { filtro.com = this.value; tabla(); };
+  $('#f-ord').onchange = function () { filtro.orden = this.value; filtro.dir = this.value === 'apr' ? -1 : 1; tabla(); };
   $('#f-grupo').onchange = function () { filtro.grupo = this.value; tabla(); };
   $('#f-q').oninput = function () { filtro.q = this.value; tabla(); };
   $$('[data-cond]').forEach(function (c) { c.onclick = function () { filtro.cond = filtro.cond === c.dataset.cond ? '' : c.dataset.cond; $$('[data-cond]').forEach(function (x) { x.setAttribute('aria-pressed', x.dataset.cond === filtro.cond); }); tabla(); }; });
@@ -880,8 +997,9 @@ function filtrados() {
   });
 }
 function tabla() {
-  var lista = filtrados(), MAX = 400;
-  var head = '<tr><th>Alumno</th><th>Legajo</th><th>Com.</th><th>Grupo</th>' + D.cps.map(function (c) { return '<th title="Clase ' + esc(c.clase) + ': teórico | cápsula">C' + esc(c.clase) + '</th>'; }).join('') + '<th>Aprob.</th><th>Condición</th></tr>';
+  var est = { k: filtro.orden, dir: filtro.dir };
+  var lista = ordenar(filtrados(), ORDEN[filtro.orden] || ORDEN.apellido, filtro.dir), MAX = 400;
+  var head = '<tr>' + thOrd('apellido', 'Alumno', est) + thOrd('legajo', 'Legajo', est) + thOrd('com', 'Com.', est) + thOrd('grupo', 'Grupo', est) + D.cps.map(function (c) { return '<th title="Clase ' + esc(c.clase) + ': teórico | cápsula">C' + esc(c.clase) + '</th>'; }).join('') + thOrd('apr', 'Aprob.', est) + '<th>Condición</th></tr>';
   var rows = lista.slice(0, MAX).map(function (a) {
     return '<tr class="click" data-leg="' + esc(a.legajo) + '"><td>' + esc(a.apellido + ', ' + a.nombre) + '</td><td class="mono">' + esc(a.legajo) + '</td><td>' + esc(a.com) + '</td><td class="mono">' + esc(a.grupo) + '</td>' +
       a.celdas.map(function (c) { return '<td><span class="cell"><i class="' + c[0] + '"></i><i class="' + c[1] + '"></i></span></td>'; }).join('') +
@@ -891,6 +1009,7 @@ function tabla() {
     '<p class="legend"><span><i style="background:var(--ok)"></i>Aprobado</span><span><i style="background:var(--today)"></i>Aprobado fuera de tiempo</span><span><i style="background:var(--no)"></i>Desaprobado o no hecho</span><span><i style="background:var(--paper);border:1px solid var(--faint)"></i>Abierto, pendiente</span><span><i style="border:1px dashed var(--rule)"></i>Todavía no abrió</span><span>Cada celda: teórico | cápsula</span></p>' +
     '<p class="xs sub" style="margin-top:6px">' + lista.length + ' alumnos' + (lista.length > MAX ? ' (se muestran los primeros ' + MAX + ')' : '') + '</p>';
   $$('#tabla [data-leg]').forEach(function (el) { el.onclick = function () { fichaAlumno(el.dataset.leg); }; });
+  $$('#tabla th[data-ord]').forEach(function (th) { th.onclick = function () { var k = th.dataset.ord; filtro.dir = filtro.orden === k ? -filtro.dir : (k === 'apr' ? -1 : 1); filtro.orden = k; if ($('#f-ord')) $('#f-ord').value = k; tabla(); }; });
 }
 function abrirDrawer(html) {
   $('#drawer-root').innerHTML = '<div class="scrim" id="scrim"></div><aside class="drawer" role="dialog" aria-modal="true">' + html + '</aside>';
@@ -923,7 +1042,9 @@ function estadoEntregas(g) {
 }
 function docGrupos() {
   var b = $('#doc-body');
-  var rows = D.grupos.map(function (g) {
+  var OG = { grupo: function (g) { return g.grupo; }, com: function (g) { return String(g.com); }, nota: function (g) { var n = D.r.notas[g.grupo]; return n && n.nota !== '' ? Number(n.nota) : -1; } };
+  var lista = D.grupos.filter(function (g) { return !filtro.com || g.com === filtro.com; }).slice().sort(function (a, b) { var x = OG[ordenG.k](a), y = OG[ordenG.k](b); return (typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'es', { numeric: true })) * ordenG.dir || a.grupo.localeCompare(b.grupo); });
+  var rows = lista.map(function (g) {
     var tp = D.r.tp[g.grupo] || {}, ult = 0;
     Object.keys(tp).forEach(function (k) { if (tp[k].t > ult) ult = tp[k].t; });
     var nota = D.r.notas[g.grupo];
@@ -933,10 +1054,14 @@ function docGrupos() {
       '<td><input class="nota" type="number" min="1" max="10" step="0.5" inputmode="decimal" data-nota="' + esc(g.grupo) + '" value="' + (nota && nota.nota !== '' ? esc(nota.nota) : '') + '" aria-label="Nota del grupo ' + esc(g.grupo) + '"></td>' +
       '<td><button class="btn quiet sm" data-tp="' + esc(g.grupo) + '">Ver TP</button></td></tr>';
   }).join('');
-  b.innerHTML = '<p class="sm sub" style="margin-bottom:12px">La nota es grupal, del 1 al 10, y se carga después de leer el PDF final. Se guarda sola al salir del casillero y la ven los integrantes del grupo.</p>' +
-    '<div class="tbox"><table class="t"><thead><tr><th>Grupo</th><th>Com.</th><th>Integrantes</th><th>Entregas</th><th>Última edición</th><th>Final</th><th>Nota</th><th></th></tr></thead><tbody>' + (rows || '<tr><td colspan="8" class="empty">Sin grupos en el padrón.</td></tr>') + '</tbody></table></div>' +
+  var est = { k: ordenG.k, dir: ordenG.dir };
+  b.innerHTML = '<div class="tools"><select id="g-com" aria-label="Comisión o turno">' + opciones(unicos(function (a) { return a.com; }), filtro.com, 'Todas las comisiones / turnos') + '</select><span class="xs sub">Tocá el título de una columna para ordenar.</span></div>' +
+    '<p class="sm sub" style="margin-bottom:12px">La nota es grupal, del 1 al 10, y se carga después de leer el PDF final. Se guarda sola al salir del casillero y la ven los integrantes del grupo.</p>' +
+    '<div class="tbox"><table class="t"><thead><tr>' + thOrd('grupo', 'Grupo', est) + thOrd('com', 'Com.', est) + '<th>Integrantes</th><th>Entregas</th><th>Última edición</th><th>Final</th>' + thOrd('nota', 'Nota', est) + '<th></th></tr></thead><tbody>' + (rows || '<tr><td colspan="8" class="empty">Sin grupos en el padrón.</td></tr>') + '</tbody></table></div>' +
     '<p class="legend"><span><i style="background:var(--ok)"></i>Con contenido a tiempo</span><span><i style="background:var(--today)"></i>Editada después del vencimiento</span><span><i style="background:var(--no-soft);border:1px solid var(--no)"></i>Vencida sin texto</span><span><i style="border:1px dashed var(--rule)"></i>Todavía no abrió</span></p>';
   $$('[data-tp]').forEach(function (x) { x.onclick = function () { verTP(x.dataset.tp); }; });
+  $('#g-com').onchange = function () { filtro.com = this.value; docGrupos(); };
+  $$('#doc-body th[data-ord]').forEach(function (th) { th.onclick = function () { var k = th.dataset.ord; ordenG.dir = ordenG.k === k ? -ordenG.dir : 1; ordenG.k = k; docGrupos(); }; });
   $$('[data-nota]').forEach(function (inp) { inp.onchange = function () { guardarNota(inp.dataset.nota, inp.value, null, inp); }; });
 }
 function guardarNota(g, nota, comentario, inp) {
@@ -1011,7 +1136,7 @@ function arrancar() {
   if (DEMO) {
     var G = window.GDPO_DEMO;
     $('#demo-note').hidden = false; $('#demo-bar').hidden = false;
-    $('#in-mail').value = G.alumnoDemo.mail; $('#in-leg').value = G.alumnoDemo.legajo; $('#in-dni').value = G.alumnoDemo.dni;
+    $('#in-mail').value = G.alumnoDemo.mail; $('#in-leg').value = G.alumnoDemo.legajo;
     $('#d-mail').value = 'brian@econo.unlp.edu.ar'; $('#d-clave').value = 'demo';
     var di = $('#demo-date'); di.value = G.fechaLocal();
     di.onchange = function () { if (this.value) cambiarFecha(new Date(this.value).getTime()); };

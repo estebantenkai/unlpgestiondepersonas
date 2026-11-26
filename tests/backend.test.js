@@ -26,10 +26,12 @@ t('probarBackend pasa con el contenido de ejemplo', () => { B.api.probarBackend(
 
 env._fijarAhora(D('2027-03-18 10:00'));
 let cam;
-t('rechaza DNI equivocado', () => assert.equal(L({ accion: 'ingresar', mail: 'camila.rossi@alu.econo.unlp.edu.ar', legajo: '41287/3', dni: '1' }).error, 'acceso'));
-t('ingresa con mail + legajo + DNI (normaliza mayúsculas y puntos)', () => {
-  cam = L({ accion: 'ingresar', mail: ' Camila.Rossi@alu.econo.unlp.edu.ar ', legajo: '41287/3', dni: '40.111.222' });
+t('rechaza mail que no corresponde al legajo', () => assert.equal(L({ accion: 'ingresar', mail: 'tomas.paz@alu.econo.unlp.edu.ar', legajo: '41287/3' }).error, 'acceso'));
+t('ingresa sólo con mail + legajo (normaliza mayúsculas y espacios)', () => {
+  cam = L({ accion: 'ingresar', mail: ' Camila.Rossi@alu.econo.unlp.edu.ar ', legajo: ' 41287/3' });
   assert(cam.ok && cam.token); assert.equal(cam.yo.grupo, 'G01'); assert.deepEqual(cam.yo.companeros, ['Camila Rossi', 'Tomás Paz']);
+  assert.deepEqual(cam.yo.equipo.map(x => x.mail), ['camila.rossi@alu.econo.unlp.edu.ar', 'tomas.paz@alu.econo.unlp.edu.ar']);
+  assert(cam.yo.equipo[0].yo && !cam.yo.equipo[1].yo);
 });
 t('cronograma: 10 checkpoints; clase 2 cierra 15 días después del fin de la unidad I', () => {
   const cps = cam.cronograma.filter(c => c.tiene_checkpoint);
@@ -52,12 +54,29 @@ t('entrega 2 de 3 correctas en 12 min: aprobado y marcado como excedido', () => 
   env._fijarAhora(D('2027-03-18 10:12'));
   const r = L({ accion: 'entregar', token: cam.token, clase: '2', parte: 'teorico', respuestas: { 1: '1', 2: '2', 3: '0' } });
   assert(r.ok && r.aprobado); assert.equal(r.correctas, 2); assert.equal(r.segundos, 720); assert(r.excedido);
+  assert.equal(r.correccion.length, 3); assert.equal(r.correccion[2].ok, false); assert.equal(r.correccion[2].correcta, '1'); assert.equal(r.correccion[2].elegida, '0');
 });
 t('no permite un segundo intento', () => assert.equal(L({ accion: 'entregar', token: cam.token, clase: '2', parte: 'teorico', respuestas: {} }).error, 'ya_entregado'));
-t('cápsula incompleta queda desaprobada; completa, aprobada', () => {
-  L({ accion: 'comenzar', token: cam.token, clase: '2', parte: 'capsula' });
-  const r = L({ accion: 'entregar', token: cam.token, clase: '2', parte: 'capsula', respuestas: { 1: 'Socio estratégico: planificaban la planta.', 2: 'Algo' } });
-  assert(r.aprobado);
+t('cápsula de opción múltiple: se aprueba con 2 de 3 correctas', () => {
+  const c = L({ accion: 'comenzar', token: cam.token, clase: '2', parte: 'capsula' });
+  assert.equal(c.preguntas.length, 3); assert.equal(c.preguntas[0].tipo, 'opcion');
+  const r = L({ accion: 'entregar', token: cam.token, clase: '2', parte: 'capsula', respuestas: { 1: '1', 2: '0', 3: '3' } });
+  assert(r.aprobado); assert.equal(r.correctas, 2); assert.equal(r.total, 3);
+});
+t('correcciones: el alumno puede volver a ver y descargar lo que respondió', () => {
+  const r = L({ accion: 'correcciones', token: cam.token });
+  assert(r.ok); assert.equal(r.items.length, 2);
+  const cap = r.items.find(i => i.parte === 'capsula');
+  assert.deepEqual(cap.detalle.map(d => d.ok), [true, true, false]);
+  assert.equal(L({ accion: 'correcciones', token: cam.token, clase: '2', parte: 'teorico' }).items.length, 1);
+});
+t('con ver_correctas = AL_CERRAR no se muestran hasta que cierra la clase', () => {
+  env._libro.getSheetByName('Config').filas.forEach(f => { if (f[0] === 'ver_correctas') f[1] = 'AL_CERRAR'; });
+  B.api.limpiarCache();
+  const r = L({ accion: 'correcciones', token: cam.token });
+  assert.equal(r.items.length, 0); assert.equal(r.ocultas, 2);
+  env._libro.getSheetByName('Config').filas.forEach(f => { if (f[0] === 'ver_correctas') f[1] = 'AL_ENTREGAR'; });
+  B.api.limpiarCache();
 });
 t('el progreso sobrevive a que se vacíe la caché (lo relee de la planilla)', () => {
   env._limpiarCache();
@@ -67,7 +86,7 @@ t('el progreso sobrevive a que se vacíe la caché (lo relee de la planilla)', (
 t('con excedido_desaprueba = SI, pasarse desaprueba', () => {
   env._libro.getSheetByName('Config').filas.forEach(f => { if (f[0] === 'excedido_desaprueba') f[1] = 'SI'; });
   B.api.limpiarCache();
-  const tom = L({ accion: 'ingresar', mail: 'tomas.paz@alu.econo.unlp.edu.ar', legajo: '41300/1', dni: '40222333' });
+  const tom = L({ accion: 'ingresar', mail: 'tomas.paz@alu.econo.unlp.edu.ar', legajo: '41300/1' });
   L({ accion: 'comenzar', token: tom.token, clase: '2', parte: 'teorico' });
   env._fijarAhora(D('2027-03-18 10:30'));
   const r = L({ accion: 'entregar', token: tom.token, clase: '2', parte: 'teorico', respuestas: { 1: '1', 2: '2', 3: '1' } });
@@ -81,7 +100,7 @@ t('después del cierre no se puede entregar', () => {
 });
 
 // TP grupal
-const tom = L({ accion: 'ingresar', mail: 'tomas.paz@alu.econo.unlp.edu.ar', legajo: '41300/1', dni: '40222333' });
+const tom = L({ accion: 'ingresar', mail: 'tomas.paz@alu.econo.unlp.edu.ar', legajo: '41300/1' });
 let v0;
 t('TP: guardar y leer desde otra cuenta del grupo', () => {
   const g = L({ accion: 'tpGuardar', token: cam.token, cambios: [{ campo: 'e1', valor: '<p>Diagnóstico =SUMA(1;2)</p>', base: 0 }] });
@@ -100,7 +119,7 @@ t('TP: tpVersion cambia cuando alguien guarda', () => {
   assert(L({ accion: 'tpVersion', token: cam.token }).version > v0);
 });
 t('TP: alumno sin grupo no puede editar', () => {
-  const ana = L({ accion: 'ingresar', mail: 'sin.grupo@alu.econo.unlp.edu.ar', legajo: '41999/9', dni: '40999888' });
+  const ana = L({ accion: 'ingresar', mail: 'sin.grupo@alu.econo.unlp.edu.ar', legajo: '41999/9' });
   assert.equal(L({ accion: 'tpGuardar', token: ana.token, cambios: [{ campo: 'e1', valor: 'x' }] }).error, 'sin_grupo');
 });
 t('TP: después de la entrega final queda cerrado', () => {
@@ -113,6 +132,20 @@ let doc;
 t('docente: clave incorrecta rechazada; correcta entra', () => {
   assert.equal(L({ accion: 'docIngresar', mail: 'brian@econo.unlp.edu.ar', clave: 'x' }).error, 'acceso');
   doc = L({ accion: 'docIngresar', mail: 'Brian@econo.unlp.edu.ar', clave: 'demo' }); assert(doc.ok);
+});
+t('docente: clave común de Config sirve para todos los de la hoja Docentes, y para nadie más', () => {
+  env._libro.getSheetByName('Config').filas.forEach(f => { if (f[0] === 'clave_docentes') f[1] = 'gdpo2027'; if (f[0] === 'manual_url') f[1] = 'https://ejemplo/manual'; });
+  B.api.limpiarCache();
+  const r = L({ accion: 'docIngresar', mail: 'lina.zubiria@econo.unlp.edu.ar', clave: 'gdpo2027' });
+  assert(r.ok); assert.equal(r.manual, 'https://ejemplo/manual');
+  assert.equal(L({ accion: 'docIngresar', mail: 'intruso@gmail.com', clave: 'gdpo2027' }).error, 'acceso');
+});
+t('configurarBitacora en una planilla vieja agrega las claves nuevas sin pisar las existentes', () => {
+  const hc = env._libro.getSheetByName('Config');
+  hc.filas = hc.filas.filter(f => f[0] !== 'ver_correctas');
+  B.api.configurarBitacora();
+  assert(hc.filas.some(f => f[0] === 'ver_correctas'));
+  assert.equal(hc.filas.find(f => f[0] === 'clave_docentes')[1], 'gdpo2027');
 });
 t('docente: un token de alumno no abre el tablero', () => assert.equal(L({ accion: 'docResumen', token: cam.token }).error, 'sesion'));
 t('docente: resumen con alumnos, intentos y TP', () => {

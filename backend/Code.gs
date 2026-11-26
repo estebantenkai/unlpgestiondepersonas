@@ -55,7 +55,10 @@ const CONFIG_INICIAL = [
   ['dias_cierre', 15, 'Días que queda abierto un checkpoint después de terminada la unidad'],
   ['caso_tp', '', 'Texto del caso del TP grupal que ven todos los grupos'],
   ['prueba_carga', 'NO', 'SI sólo mientras se corre prueba-carga.html; después volver a NO'],
-  ['secreto', '', 'Lo genera configurarBitacora(). No compartir.']
+  ['secreto', '', 'Lo genera configurarBitacora(). No compartir.'],
+  ['clave_docentes', 'CAMBIAR', 'Clave común para que entren todos los docentes de la hoja Docentes'],
+  ['manual_url', '', 'Link al manual de uso (se muestra en el tablero docente)'],
+  ['ver_correctas', 'AL_ENTREGAR', 'AL_ENTREGAR: el alumno ve las correctas apenas entrega. AL_CERRAR: recién cuando cierra la clase. NO: nunca.']
 ];
 
 /* =========================================================
@@ -70,6 +73,10 @@ function configurarBitacora() {
   });
   const hc = ss.getSheetByName('Config');
   if (hc.getLastRow() < 2) hc.getRange(2, 1, CONFIG_INICIAL.length, 3).setValues(CONFIG_INICIAL);
+  else {                                   // planilla de una versión anterior: agrega sólo las claves nuevas
+    const hay = hc.getRange(2, 1, hc.getLastRow() - 1, 1).getValues().map(function (f) { return String(f[0]); });
+    CONFIG_INICIAL.forEach(function (f) { if (hay.indexOf(f[0]) < 0) hc.appendRow(f); });
+  }
   const filas = hc.getRange(2, 1, hc.getLastRow() - 1, 2).getValues();
   filas.forEach(function (f, i) {
     if (f[0] === 'secreto' && !f[1]) hc.getRange(i + 2, 2).setValue(Utilities.getUuid() + Utilities.getUuid());
@@ -79,7 +86,15 @@ function configurarBitacora() {
   Logger.log('Listo. Cargá Cronograma, Preguntas, EntregasTP, Padron y Docentes.');
 }
 
-/** Ejecutar después de editar a mano Cronograma, Preguntas, Padron, Docentes o Config. */
+/** Se ejecuta solo cuando alguien edita a mano la planilla: así la herramienta ve los cambios enseguida. */
+function onEdit(e) {
+  try {
+    const n = e && e.range ? e.range.getSheet().getName() : '';
+    if (['Config', 'Cronograma', 'Preguntas', 'EntregasTP', 'Padron', 'Docentes', 'Notas'].indexOf(n) >= 0) limpiarCache();
+  } catch (err) {}
+}
+
+/** Ejecutar después de editar a mano Cronograma, Preguntas, Padron, Docentes o Config (onEdit ya lo hace solo). */
 function limpiarCache() {
   CacheService.getScriptCache().removeAll(['cfg#n', 'crono#n', 'preg#n', 'entTP#n', 'padron#n', 'docentes#n', 'notas#n', 'resumen#n', 'idxTP#n']);
   Logger.log('Caché limpia: los cambios de la planilla ya se ven en la herramienta.');
@@ -105,6 +120,7 @@ function manejar_(p) {
       case 'estado':      return json_(estado_(p));
       case 'comenzar':    return json_(comenzar_(p));
       case 'entregar':    return json_(entregar_(p));
+      case 'correcciones':return json_(correcciones_(p));
       case 'tpLeer':      return json_(tpLeer_(p));
       case 'tpVersion':   return json_(tpVersion_(p));
       case 'tpGuardar':   return json_(tpGuardar_(p));
@@ -125,12 +141,12 @@ function manejar_(p) {
    ALUMNOS
    ========================================================= */
 
-/** Ingreso con correo institucional + legajo + DNI, contra el padrón. */
+/** Ingreso con correo institucional + legajo, contra el padrón (el DNI ya no se pide). */
 function ingresar_(p) {
-  const mail = norm_(p.mail), legajo = normLegajo_(p.legajo), dni = soloDigitos_(p.dni);
-  if (!mail || !legajo || !dni) return { ok: false, error: 'datos' };
+  const mail = norm_(p.mail), legajo = normLegajo_(p.legajo);
+  if (!mail || !legajo) return { ok: false, error: 'datos' };
   const al = padron_()[legajo];
-  if (!al || al.mail !== mail || al.dni !== dni) return { ok: false, error: 'acceso' };
+  if (!al || al.mail !== mail) return { ok: false, error: 'acceso' };
   const token = firmar_({ r: 'al', l: legajo, x: Date.now() + CFG.DURACION_SESION_H * 3600e3 });
   return Object.assign({ ok: true, token: token }, estadoDe_(al));
 }
@@ -148,14 +164,18 @@ function estadoDe_(al) {
   const comp = al.grupo ? Object.keys(padron_()).map(function (k) { return padron_()[k]; })
     .filter(function (x) { return x.grupo === al.grupo; })
     .map(function (x) { return x.nombre + ' ' + x.apellido; }) : [];
+  const equipo = al.grupo ? Object.keys(padron_()).map(function (k) { return padron_()[k]; })
+    .filter(function (x) { return x.grupo === al.grupo; })
+    .map(function (x) { return { nombre: x.nombre + ' ' + x.apellido, mail: x.mail, yo: x.legajo === al.legajo }; }) : [];
   return {
-    yo: { legajo: al.legajo, nombre: al.nombre, apellido: al.apellido, comision: al.comision, grupo: al.grupo, companeros: comp },
+    yo: { legajo: al.legajo, nombre: al.nombre, apellido: al.apellido, comision: al.comision, grupo: al.grupo, companeros: comp, equipo: equipo },
     reglas: {
       minutos: Number(cfg.minutos_sugeridos) || 10,
       minimoCorrectas: Number(cfg.minimo_correctas) || 2,
       promocion: Number(cfg.aprobados_promocion) || 8,
       regular: Number(cfg.aprobados_regular) || 5,
       excedidoDesaprueba: String(cfg.excedido_desaprueba).toUpperCase() === 'SI',
+      verCorrectas: verCorrectas_(),
       cuatrimestre: cfg.cuatrimestre
     },
     caso: desproteger_(cfg.caso_tp || ''),
@@ -215,9 +235,11 @@ function entregar_(p) {
   const limite = (Number(cfg.minutos_sugeridos) || 10) * 60;
   const excedido = segundos > limite;
 
+  // Con preguntas de opción múltiple (teórico y cápsula) se aprueba por correctas; si una parte
+  // tuviera sólo preguntas abiertas, se aprueba al entregarla completa.
   let aprobado;
-  if (parte === 'teorico') aprobado = correctas >= Math.min(Number(cfg.minimo_correctas) || 2, cerradas || 0);
-  else aprobado = respondidas >= qs.length;            // cápsula: se aprueba al entregar completa
+  if (cerradas) aprobado = correctas >= Math.min(Number(cfg.minimo_correctas) || 2, cerradas);
+  else aprobado = respondidas >= qs.length;
   if (excedido && String(cfg.excedido_desaprueba).toUpperCase() === 'SI') aprobado = false;
 
   // Sin bloqueo global: appendRow agrega la fila de forma atómica, así que muchas entregas
@@ -234,7 +256,49 @@ function entregar_(p) {
   prog[clase + '|' + parte] = { a: aprobado, s: segundos, x: excedido, c: correctas, t: cerradas };
   guardarJson_('prog|' + s.l, prog, CFG.TTL_CACHE);
   cache.remove('ini|' + s.l + '|' + clase + '|' + parte);
-  return { ok: true, aprobado: aprobado, correctas: correctas, total: cerradas, segundos: segundos, excedido: excedido };
+  const ver = puedeVer_(c.clase);
+  return { ok: true, aprobado: aprobado, correctas: correctas, total: cerradas, segundos: segundos, excedido: excedido,
+           correccion: ver ? detalle_(qs, resp) : null, verDesde: ver ? null : c.clase.cierra };
+}
+
+/* ---------- Corrección: qué respondió el alumno y cuál era la correcta ---------- */
+function verCorrectas_() {
+  const v = String(config_().ver_correctas || 'AL_ENTREGAR').toUpperCase().replace(/\s+/g, '_');
+  return v === 'NO' || v === 'AL_CERRAR' ? v : 'AL_ENTREGAR';
+}
+function puedeVer_(c) {
+  const v = verCorrectas_();
+  return v === 'AL_ENTREGAR' || (v === 'AL_CERRAR' && c && Date.now() > c.cierra);
+}
+function detalle_(qs, resp) {
+  return qs.map(function (q) {
+    const r = resp[q.n];
+    return { n: q.n, tipo: q.tipo, enunciado: q.enunciado, opciones: q.opciones,
+             elegida: r === undefined || r === null ? '' : String(r),
+             correcta: q.tipo === 'opcion' ? String(q.correcta) : '',
+             ok: q.tipo === 'opcion' ? String(r) === String(q.correcta) : null };
+  });
+}
+/** Todas las correcciones del alumno (o una clase/parte), para revisarlas o descargarlas. */
+function correcciones_(p) {
+  const s = sesion_(p, 'al');
+  if (!s) return { ok: false, error: 'sesion' };
+  const crono = {}; cronograma_().forEach(function (c) { crono[c.clase] = c; });
+  const h = hoja_('Intentos'), out = [];
+  let ocultas = 0;
+  if (h.getLastRow() > 1) {
+    h.getRange(2, 2, h.getLastRow() - 1, 1).createTextFinder(s.l).matchEntireCell(true).findAll().forEach(function (cel) {
+      const f = h.getRange(cel.getRow(), 1, 1, 11).getValues()[0];
+      const clase = String(f[2]), parte = String(f[3]);
+      if (p.clase && (String(p.clase) !== clase || String(p.parte) !== parte)) return;
+      if (!puedeVer_(crono[clase])) { ocultas++; return; }
+      let resp = {};
+      try { resp = JSON.parse(desproteger_(f[10]) || '{}'); } catch (e) {}
+      out.push({ clase: clase, parte: parte, aprobado: f[9] === 'SI', correctas: Number(f[7]), total: Number(f[8]), segundos: Number(f[5]),
+                 tema: crono[clase] ? crono[clase].tema : '', detalle: detalle_(preguntas_()[clase + '|' + parte] || [], resp) });
+    });
+  }
+  return { ok: true, items: out, ocultas: ocultas };
 }
 
 /** Progreso de un alumno: {"clase|parte": {a,s,x,c,t}}. Sale de caché; si no está, busca sólo sus filas. */
@@ -383,11 +447,14 @@ function notaGrupo_(grupo) {
    DOCENTES (Marina, Lina y equipo de TP ven toda la cátedra)
    ========================================================= */
 
+/** Entra quien figura en la hoja Docentes con la clave común (Config › clave_docentes) o con su clave personal, si tiene. */
 function docIngresar_(p) {
   const d = docentes_()[norm_(p.mail)];
-  if (!d || String(d.clave) !== String(p.clave || '')) return { ok: false, error: 'acceso' };
+  const clave = String(p.clave || '').trim(), comun = String(config_().clave_docentes || '').trim();
+  const vale = clave && ((comun && comun !== 'CAMBIAR' && clave === comun) || (d && d.clave && clave === String(d.clave).trim()));
+  if (!d || !vale) return { ok: false, error: 'acceso' };
   const token = firmar_({ r: 'doc', m: d.mail, x: Date.now() + 12 * 3600e3 });
-  return { ok: true, token: token, yo: { nombre: d.nombre, rol: d.rol } };
+  return { ok: true, token: token, yo: { nombre: d.nombre, rol: d.rol }, manual: String(config_().manual_url || '') };
 }
 
 /** Todo lo que necesita el tablero, en un solo pedido. Se cachea 60 s para que 10 docentes no multipliquen la carga. */
@@ -420,7 +487,7 @@ function docResumen_(p) {
     ok: true, generado: Date.now(),
     alumnos: alumnos, intentos: intentos, tp: tp, notas: notas_(),
     cronograma: cronograma_(), entregasTP: entregasTP_(),
-    reglas: estadoReglas_()
+    reglas: estadoReglas_(), manual: String(config_().manual_url || '')
   };
   guardarJson_('resumen', out, CFG.TTL_RESUMEN);
   return out;

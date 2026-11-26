@@ -109,18 +109,59 @@ var CONTENIDO = (function () {
     ]
   };
 
-  // clase -> 2 preguntas abiertas sobre la cápsula (se aprueba al entregarlas completas)
+  // clase -> 3 preguntas de opción múltiple sobre la cápsula (misma regla que el teórico: 2 de 3).
+  // Son provisorias: se ajustan cuando estén grabados los videos y podcasts.
   var capsula = {
-    '2': ['¿Qué rol de Ulrich predomina en el área que describe la entrevistada? Citá un ejemplo concreto que hayas escuchado.', '¿Qué rol aparece menos? ¿Qué riesgo le ves a eso para la empresa?'],
-    '3': ['Elegí una idea del podcast sobre motivación y relacionala con un modelo visto en el teórico.', '¿Qué haría distinto un jefe de equipo después de escuchar este podcast? Una acción concreta.'],
-    '4': ['¿Qué criterio usa Atalaya para definir qué necesita un puesto de tienda? Resumilo en tus palabras.', '¿Qué diferencia entre descripción y perfil del puesto identificás en lo que cuenta el entrevistado?'],
-    '5': ['¿Qué momento del programa de inducción te pareció más importante y por qué?', '¿Qué agregarías al programa para una persona que trabaja en forma remota?'],
-    '6': ['¿Qué hizo bien y qué mejorarías de la conversación de desempeño que escuchaste?', '¿Qué evidencia debería tener el evaluador antes de esa conversación?'],
-    '7': ['¿Cómo detectan en Globant qué necesita aprender cada persona?', '¿Qué parte de lo que contó el entrevistado se podría aplicar en una pyme? ¿Cómo?'],
-    '8': ['Describí con tus palabras una técnica para dar feedback que aparece en el podcast.', 'Pensá una situación real (trabajo, facultad, club) donde la hubieras podido usar. ¿Qué habrías dicho?'],
-    '9': ['¿Qué componentes del paquete de compensaciones destaca el entrevistado como más valorados hoy?', '¿Qué tensión ves entre equidad interna y competitividad en lo que cuenta?'],
-    '10': ['¿Qué papel cumple el convenio colectivo en la gestión cotidiana según lo que escuchaste?', '¿Qué indicador usarías para saber si la relación con el gremio está mejorando?'],
-    '12': ['¿Qué idea de la cápsula resume mejor qué significa alinear personas y estrategia?', '¿Qué práctica de RRHH revisarías primero en una organización que conozcas para alinearla?']
+    '2': [
+      ['En la entrevista, el área de RRHH participa del plan de apertura de una sucursal desde el primer borrador. ¿Qué rol de Ulrich muestra eso?', ['Experto administrativo.', 'Socio estratégico del negocio.', 'Defensor de los empleados.', 'Agente de cambio cultural.'], 1],
+      ['La entrevistada cuenta que la liquidación de sueldos se resolvió con un proveedor externo. ¿Qué busca la empresa con eso?', ['Liberar tiempo del área para tareas de mayor valor sin descuidar la administración.', 'Eliminar el rol de experto administrativo.', 'Reducir la dotación de toda la empresa.', 'Que los gerentes liquiden los sueldos de su equipo.'], 0],
+      ['¿Qué riesgo aparece si el área sólo cumple el rol de defensor de los empleados?', ['Que se vuelva demasiado costosa.', 'Que pierda la mirada del negocio y quede afuera de las decisiones estratégicas.', 'Que deje de cumplir la ley laboral.', 'Ninguno: es el rol más importante.'], 1]
+    ],
+    '3': [
+      ['Según el podcast, ¿qué motiva más a las generaciones jóvenes en su primer empleo?', ['Sólo el salario.', 'El aprendizaje, el sentido de la tarea y la flexibilidad, además del salario.', 'La estabilidad de por vida.', 'Los beneficios corporativos tradicionales.'], 1],
+      ['Un jefe que escuchó el podcast quiere mejorar el compromiso de su equipo. ¿Qué acción es más coherente con lo que se plantea?', ['Subir el bono anual a todos por igual.', 'Conversar con cada persona sobre qué le da sentido a su trabajo y qué quiere aprender.', 'Controlar más de cerca los horarios.', 'Organizar un evento de integración por año.'], 1],
+      ['¿Qué idea del podcast se relaciona con los motivos trascendentes del modelo antropológico?', ['Trabajar para cobrar más.', 'Trabajar por el impacto que el propio trabajo tiene en otras personas.', 'Trabajar para evitar sanciones.', 'Trabajar por reconocimiento público.'], 1]
+    ],
+    '4': [
+      ['¿Con qué empieza Atalaya a definir un puesto de tienda, según el entrevistado?', ['Con el perfil de la persona ideal.', 'Con la misión del puesto y los resultados que tiene que lograr.', 'Con el salario que se puede pagar.', 'Con el puesto equivalente de la competencia.'], 1],
+      ['"Saber cobrar, reponer y atender a dos clientes a la vez." ¿Qué es eso?', ['Parte del perfil: competencias de la persona.', 'Parte de la descripción: tareas del puesto.', 'Un objetivo de ventas.', 'Un criterio de evaluación de puestos.'], 1],
+      ['¿Para qué usa Atalaya la descripción de puesto además de seleccionar?', ['Para nada más.', 'Para inducir, evaluar el desempeño y definir la capacitación.', 'Sólo para fijar el sueldo.', 'Para cumplir con un requisito legal.'], 1]
+    ],
+    '5': [
+      ['¿Qué objetivo principal tiene el programa de inducción que muestra la cápsula?', ['Entregar el manual de normas.', 'Que la persona entienda su rol, conozca a su equipo y se sienta parte desde el primer día.', 'Evaluar si la persona aprueba el período de prueba.', 'Cargar sus datos en el sistema.'], 1],
+      ['En la cápsula, ¿quién acompaña al ingresante durante su primer mes?', ['Nadie: la persona aprende sola.', 'Sólo el área de RRHH.', 'Un referente o padrino del equipo, junto con su jefe.', 'Un consultor externo.'], 2],
+      ['¿Qué indicador usan para saber si la inducción funciona?', ['La cantidad de horas de capacitación.', 'La rotación de ingresantes en los primeros meses.', 'El ausentismo general de la empresa.', 'El costo del programa.'], 1]
+    ],
+    '6': [
+      ['¿Con qué abre el jefe la conversación de desempeño con Jorgelina?', ['Con la nota final.', 'Con los hechos y resultados del período, antes de cualquier calificación.', 'Con una crítica a su actitud.', 'Con el aumento de sueldo.'], 1],
+      ['¿Qué error comete el jefe en un momento de la conversación?', ['Pregunta la opinión de Jorgelina.', 'Generaliza a partir de un solo hecho reciente (sesgo de recencia).', 'Acuerda objetivos para el próximo período.', 'Usa ejemplos concretos.'], 1],
+      ['¿Cómo debería terminar una buena conversación de desempeño, según la cápsula?', ['Con la firma del formulario.', 'Con acuerdos concretos de mejora y desarrollo, con fechas.', 'Con una advertencia.', 'Sin conclusiones, para no presionar.'], 1]
+    ],
+    '7': [
+      ['¿Cómo detecta Globant qué necesita aprender cada persona, según el entrevistado?', ['Con un catálogo igual para todos.', 'Combinando la evaluación de desempeño, los objetivos del proyecto y lo que la persona quiere desarrollar.', 'Por antigüedad.', 'Sólo a pedido del cliente.'], 1],
+      ['¿Qué formato de aprendizaje destaca más el entrevistado?', ['Cursos presenciales largos.', 'Aprender en el trabajo, con mentores y proyectos reales.', 'Lecturas obligatorias.', 'Exámenes de certificación.'], 1],
+      ['¿Qué parte de su modelo podría aplicar una pyme sin presupuesto grande?', ['Una universidad corporativa propia.', 'Mentorías internas entre personas con más y menos experiencia.', 'Contratar plataformas internacionales.', 'Ninguna.'], 1]
+    ],
+    '8': [
+      ['¿Qué técnica de feedback se describe en el podcast?', ['Decir lo negativo entre dos elogios.', 'Describir la conducta observable, su efecto y acordar cómo seguir.', 'Dar feedback sólo por escrito.', 'Esperar a la evaluación anual.'], 1],
+      ['Según el podcast, ¿cuándo conviene dar feedback?', ['Lo más cerca posible del hecho, en privado.', 'Una vez por año.', 'Delante del equipo, para que sirva a todos.', 'Sólo cuando hay un problema grave.'], 0],
+      ['¿Qué hace que una conversación difícil salga mejor?', ['Ir preparado con hechos y escuchar la versión del otro.', 'Evitar los temas incómodos.', 'Hablar sólo de la personalidad del otro.', 'Hacerla por mensaje para no incomodar.'], 0]
+    ],
+    '9': [
+      ['¿Qué componentes del paquete destaca el entrevistado como más valorados hoy?', ['Sólo el salario fijo.', 'La flexibilidad, la salud y el desarrollo, además del salario.', 'Los autos de la empresa.', 'Los regalos de fin de año.'], 1],
+      ['¿Qué tensión aparece entre equidad interna y competitividad?', ['Ninguna.', 'Pagar más a un ingresante para atraerlo puede generar inequidad con quienes ya están en el mismo puesto.', 'La competitividad sólo importa en ventas.', 'La equidad interna depende del convenio.'], 1],
+      ['¿Para qué usan la remuneración variable, según la entrevista?', ['Para reemplazar el salario fijo.', 'Para alinear el esfuerzo con objetivos concretos del negocio.', 'Para bajar costos.', 'Para cumplir con la ley.'], 1]
+    ],
+    '10': [
+      ['¿Qué papel cumple el convenio colectivo en la gestión cotidiana, según la cápsula?', ['Ninguno: se mira sólo en las paritarias.', 'Fija pisos de salarios y condiciones que RRHH tiene que aplicar todos los días.', 'Reemplaza al contrato individual.', 'Lo administra sólo el sindicato.'], 1],
+      ['¿Qué recomienda Gonzalo para la relación con el gremio?', ['Hablar sólo cuando hay conflicto.', 'Mantener un diálogo regular y anticipar los temas sensibles.', 'Delegar todo en el estudio jurídico.', 'Evitar el contacto con los delegados.'], 1],
+      ['¿Qué indicador sirve para ver si la relación laboral mejora?', ['La cantidad de reclamos y conflictos resueltos por diálogo antes de escalar.', 'La facturación.', 'La cantidad de reuniones con proveedores.', 'El precio de la acción.'], 0]
+    ],
+    '12': [
+      ['¿Qué significa alinear personas y estrategia, según la cápsula?', ['Que todos tengan el mismo sueldo.', 'Que las prácticas de RRHH (selección, desempeño, capacitación, compensaciones) empujen hacia los objetivos de la organización.', 'Que RRHH defina la estrategia.', 'Que haya un organigrama claro.'], 1],
+      ['¿Por dónde conviene empezar a revisar el alineamiento?', ['Por la estrategia y los resultados buscados.', 'Por el presupuesto del área.', 'Por la encuesta de clima.', 'Por el manual de procedimientos.'], 0],
+      ['Una empresa quiere innovar pero sólo premia el cumplimiento de procedimientos. ¿Qué muestra?', ['Un buen control interno.', 'Un desalineamiento entre la estrategia y el sistema de incentivos.', 'Un problema de comunicación externa.', 'Nada relevante.'], 1]
+    ]
   };
 
   // TP grupal secuencial: caso Ceibo Alimentos (ficticio, para que el equipo de TP lo reemplace o ajuste)
@@ -148,7 +189,7 @@ var CONTENIDO = (function () {
     var out = [];
     Object.keys(teorico).forEach(function (c) {
       teorico[c].forEach(function (q, i) { out.push([c, 'teorico', String(i + 1), 'opcion', q[0], q[1].join(' | '), String(q[2])]); });
-      (capsula[c] || []).forEach(function (q, i) { out.push([c, 'capsula', String(i + 1), 'abierta', q, '', '']); });
+      (capsula[c] || []).forEach(function (q, i) { out.push([c, 'capsula', String(i + 1), 'opcion', q[0], q[1].join(' | '), String(q[2])]); });
     });
     return out;
   }
