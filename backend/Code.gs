@@ -108,6 +108,14 @@ function menuActualizar() {
 
 function menuNuevoCuatrimestre() {
   const ui = SpreadsheetApp.getUi();
+  // Candado 1: sólo el dueño de la planilla puede usarlo (aunque otros docentes puedan editarla).
+  let quien = '', dueno = '';
+  try { quien = Session.getActiveUser().getEmail(); } catch (e) {}
+  try { dueno = SpreadsheetApp.getActiveSpreadsheet().getOwner().getEmail(); } catch (e) {}
+  if (!quien || !dueno || quien.toLowerCase() !== dueno.toLowerCase()) {
+    ui.alert('Sólo el dueño de la planilla puede empezar un cuatrimestre nuevo.\nNo se cambió nada.');
+    return;
+  }
   const actual = String(config_().cuatrimestre || '');
   const r = ui.prompt('Empezar un cuatrimestre nuevo',
     'Cuatrimestre actual: ' + actual + '\n\n¿Cómo se llama el nuevo? (por ejemplo: 2C 2027)', ui.ButtonSet.OK_CANCEL);
@@ -120,6 +128,12 @@ function menuNuevoCuatrimestre() {
     'Se mantienen: Config, Cronograma, Preguntas, EntregasTP y Docentes.\n\n' +
     'Todos los alumnos y docentes van a tener que volver a entrar.', ui.ButtonSet.YES_NO);
   if (ok !== ui.Button.YES) return;
+  // Candado 2: hay que escribir BORRAR a mano, así no se activa por un clic de más.
+  const conf = ui.prompt('Última confirmación', 'Para seguir, escribí BORRAR en mayúsculas.', ui.ButtonSet.OK_CANCEL);
+  if (conf.getSelectedButton() !== ui.Button.OK || conf.getResponseText().trim() !== 'BORRAR') {
+    ui.alert('No escribiste BORRAR. No se cambió nada.');
+    return;
+  }
   const res = nuevoCuatrimestre_(nombre);
   ui.alert('Listo: ya está todo preparado para ' + nombre,
     'La copia de ' + actual + ' quedó en tu Drive con el nombre:\n"' + res.respaldo + '"\n\n' +
