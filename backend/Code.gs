@@ -86,6 +86,71 @@ function configurarBitacora() {
   Logger.log('Listo. Cargá Cronograma, Preguntas, EntregasTP, Padron y Docentes.');
 }
 
+/* =========================================================
+   MENÚ DE LA PLANILLA Y CAMBIO DE CUATRIMESTRE
+   ========================================================= */
+
+/** Agrega el menú "Bitácora GDPO" arriba en la planilla cada vez que se abre. */
+function onOpen() {
+  try {
+    SpreadsheetApp.getUi().createMenu('Bitácora GDPO')
+      .addItem('Empezar un cuatrimestre nuevo…', 'menuNuevoCuatrimestre')
+      .addSeparator()
+      .addItem('Actualizar la herramienta con los cambios de la planilla', 'menuActualizar')
+      .addToUi();
+  } catch (err) {}
+}
+
+function menuActualizar() {
+  limpiarCache();
+  SpreadsheetApp.getUi().alert('Listo: la herramienta ya muestra lo que hay en la planilla.');
+}
+
+function menuNuevoCuatrimestre() {
+  const ui = SpreadsheetApp.getUi();
+  const actual = String(config_().cuatrimestre || '');
+  const r = ui.prompt('Empezar un cuatrimestre nuevo',
+    'Cuatrimestre actual: ' + actual + '\n\n¿Cómo se llama el nuevo? (por ejemplo: 2C 2027)', ui.ButtonSet.OK_CANCEL);
+  if (r.getSelectedButton() !== ui.Button.OK) return;
+  const nombre = r.getResponseText().trim();
+  if (!nombre) { ui.alert('No escribiste el nombre. No se cambió nada.'); return; }
+  const ok = ui.alert('¿Seguro?',
+    'Primero se guarda una copia completa de esta planilla (con todas las notas y respuestas de ' + actual + ').\n\n' +
+    'Después se vacían: Padron, Intentos, TP, TPHistorial, Notas y Carga.\n' +
+    'Se mantienen: Config, Cronograma, Preguntas, EntregasTP y Docentes.\n\n' +
+    'Todos los alumnos y docentes van a tener que volver a entrar.', ui.ButtonSet.YES_NO);
+  if (ok !== ui.Button.YES) return;
+  const res = nuevoCuatrimestre_(nombre);
+  ui.alert('Listo: ya está todo preparado para ' + nombre,
+    'La copia de ' + actual + ' quedó en tu Drive con el nombre:\n"' + res.respaldo + '"\n\n' +
+    'Ahora te falta:\n1) Pegar el padrón nuevo en la hoja Padron (con el grupo de cada alumno).\n' +
+    '2) Revisar las fechas en Cronograma y EntregasTP.\n3) Si cambia el equipo docente, actualizar Docentes.', ui.ButtonSet.OK);
+}
+
+/** Respaldo + vaciado de los datos de alumnos. El link de la herramienta no cambia. */
+function nuevoCuatrimestre_(nombre) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const actual = String(config_().cuatrimestre || 'cuatrimestre anterior');
+  const hoy = new Date();
+  const respaldo = 'Respaldo Bitácora GDPO - ' + actual + ' (' + hoy.getDate() + '-' + (hoy.getMonth() + 1) + '-' + hoy.getFullYear() + ')';
+  const copia = ss.copy(respaldo);
+  ['Padron', 'Intentos', 'TP', 'TPHistorial', 'Notas', 'Carga'].forEach(function (n) {
+    const h = ss.getSheetByName(n);
+    if (h && h.getLastRow() > 1) h.getRange(2, 1, h.getLastRow() - 1, Math.max(h.getLastColumn(), 1)).clearContent();
+  });
+  const hc = ss.getSheetByName('Config');
+  const filas = hc.getRange(2, 1, hc.getLastRow() - 1, 2).getValues();
+  filas.forEach(function (f, i) {
+    if (f[0] === 'cuatrimestre') hc.getRange(i + 2, 2).setValue(nombre);
+    if (f[0] === 'secreto') hc.getRange(i + 2, 2).setValue(Utilities.getUuid() + Utilities.getUuid());   // cierra todas las sesiones viejas
+  });
+  SpreadsheetApp.flush();
+  PropertiesService.getScriptProperties().setProperty('gen', String(Date.now()));   // la caché vieja queda inservible
+  GEN_ = null;
+  limpiarCache();
+  return { respaldo: respaldo, url: copia && copia.getUrl ? copia.getUrl() : '' };
+}
+
 /** Se ejecuta solo cuando alguien edita a mano la planilla: así la herramienta ve los cambios enseguida. */
 function onEdit(e) {
   try {
@@ -96,7 +161,7 @@ function onEdit(e) {
 
 /** Ejecutar después de editar a mano Cronograma, Preguntas, Padron, Docentes o Config (onEdit ya lo hace solo). */
 function limpiarCache() {
-  CacheService.getScriptCache().removeAll(['cfg#n', 'crono#n', 'preg#n', 'entTP#n', 'padron#n', 'docentes#n', 'notas#n', 'resumen#n', 'idxTP#n']);
+  cache_().removeAll(['cfg#n', 'crono#n', 'preg#n', 'entTP#n', 'padron#n', 'docentes#n', 'notas#n', 'resumen#n', 'idxTP#n']);
   Logger.log('Caché limpia: los cambios de la planilla ya se ven en la herramienta.');
 }
 
@@ -196,7 +261,7 @@ function comenzar_(p) {
   if (!c.ok) return c;
   if (progresoAlumno_(s.l)[clase + '|' + parte]) return { ok: false, error: 'ya_entregado' };
 
-  const cache = CacheService.getScriptCache();
+  const cache = cache_();
   const k = 'ini|' + s.l + '|' + clase + '|' + parte;
   let inicio = Number(cache.get(k)) || 0;
   if (!inicio) { inicio = Date.now(); cache.put(k, String(inicio), CFG.TTL_CACHE); }
@@ -229,7 +294,7 @@ function entregar_(p) {
   });
   const cerradas = qs.filter(function (q) { return q.tipo === 'opcion'; }).length;
 
-  const cache = CacheService.getScriptCache();
+  const cache = cache_();
   const inicio = Number(cache.get('ini|' + s.l + '|' + clase + '|' + parte)) || Number(p.inicio) || Date.now();
   const segundos = Math.max(0, Math.round((Date.now() - inicio) / 1000));
   const limite = (Number(cfg.minutos_sugeridos) || 10) * 60;
@@ -401,7 +466,7 @@ function tpGuardar_(p) {
     }
     SpreadsheetApp.flush();
     guardarJson_('tp|' + grupo, actuales, CFG.TTL_CACHE);
-    if (Object.keys(guardados).length) CacheService.getScriptCache().put('tpv|' + grupo, String(Date.now()), CFG.TTL_CACHE);
+    if (Object.keys(guardados).length) cache_().put('tpv|' + grupo, String(Date.now()), CFG.TTL_CACHE);
     return { ok: true, guardados: guardados, conflictos: conflictos, version: versionGrupo_(grupo) };
   } finally {
     lock.releaseLock();
@@ -435,7 +500,7 @@ function indiceTP_() {
 }
 
 function versionGrupo_(grupo) {
-  return Number(CacheService.getScriptCache().get('tpv|' + grupo)) || 0;
+  return Number(cache_().get('tpv|' + grupo)) || 0;
 }
 
 function notaGrupo_(grupo) {
@@ -518,7 +583,7 @@ function docNota_(p) {
     if (cel) h.getRange(cel.getRow(), 1, 1, 5).setValues([fila]);
     else h.getRange(h.getLastRow() + 1, 1, 1, 5).setValues([fila]);
     SpreadsheetApp.flush();
-    CacheService.getScriptCache().removeAll(['notas#n', 'resumen#n']);
+    cache_().removeAll(['notas#n', 'resumen#n']);
   } finally {
     lock.releaseLock();
   }
@@ -696,8 +761,30 @@ function cacheado_(clave, fn) {
   return v;
 }
 
+/** Caché con prefijo de "generación": al empezar un cuatrimestre nuevo cambia el prefijo y todo lo viejo se ignora. */
+let GEN_ = null;
+function cache_() {
+  if (GEN_ === null) {
+    try { GEN_ = PropertiesService.getScriptProperties().getProperty('gen') || ''; } catch (e) { GEN_ = ''; }
+  }
+  const c = CacheService.getScriptCache(), g = GEN_ ? GEN_ + ':' : '';
+  const pre = function (k) { return g + k; };
+  return {
+    get: function (k) { return c.get(pre(k)); },
+    put: function (k, v, t) { return c.put(pre(k), v, t); },
+    remove: function (k) { return c.remove(pre(k)); },
+    removeAll: function (ks) { return c.removeAll(ks.map(pre)); },
+    getAll: function (ks) {
+      const o = c.getAll(ks.map(pre)), r = {};
+      ks.forEach(function (k) { if (o[pre(k)] != null) r[k] = o[pre(k)]; });
+      return r;
+    },
+    putAll: function (o, t) { const p = {}; Object.keys(o).forEach(function (k) { p[pre(k)] = o[k]; }); return c.putAll(p, t); }
+  };
+}
+
 function guardarJson_(clave, obj, ttl) {
-  const cache = CacheService.getScriptCache();
+  const cache = cache_();
   const s = JSON.stringify(obj);
   const TROZO = 90000;
   const n = Math.max(1, Math.ceil(s.length / TROZO));
@@ -708,7 +795,7 @@ function guardarJson_(clave, obj, ttl) {
 }
 
 function leerJson_(clave) {
-  const cache = CacheService.getScriptCache();
+  const cache = cache_();
   const n = Number(cache.get(clave + '#n'));
   if (!n) return null;
   const claves = [];

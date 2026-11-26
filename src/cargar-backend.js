@@ -1,10 +1,10 @@
 /* Ejecuta Code.gs dentro del entorno simulado y devuelve sus funciones. */
 function cargarBackend(env, fuente) {
-  var nombres = ['Date', 'SpreadsheetApp', 'CacheService', 'LockService', 'Utilities', 'ContentService', 'Logger', 'console', 'DriveApp'];
+  var nombres = ['Date', 'SpreadsheetApp', 'CacheService', 'LockService', 'Utilities', 'ContentService', 'Logger', 'console', 'DriveApp', 'PropertiesService'];
   var valores = nombres.map(function (n) { return env[n]; });
   var api = new Function(nombres.join(','), fuente +
     '\n;return { manejar_: manejar_, configurarBitacora: configurarBitacora, limpiarCache: limpiarCache,' +
-    ' probarBackend: typeof probarBackend === "function" ? probarBackend : null, padron_: padron_, HOJAS: HOJAS };').apply(null, valores);
+    ' probarBackend: typeof probarBackend === "function" ? probarBackend : null, padron_: padron_, HOJAS: HOJAS, nuevoCuatrimestre_: nuevoCuatrimestre_ };').apply(null, valores);
   return {
     api: api,
     llamar: function (p) {

@@ -166,5 +166,22 @@ t('prueba de carga responde sólo con el interruptor activado', () => {
   B.api.limpiarCache();
   assert.equal(L({ accion: 'carga', quien: 'v1' }).error, 'deshabilitado');
 });
+t('nuevo cuatrimestre: respalda, vacía datos de alumnos, cierra sesiones y no arrastra caché', () => {
+  const antes = L({ accion: 'ingresar', mail: 'camila.rossi@alu.econo.unlp.edu.ar', legajo: '41287/3' });
+  assert(Object.keys(antes.progreso).length > 0);
+  assert(Object.keys(L({ accion: 'tpLeer', token: antes.token }).campos).length > 0);
+  const r = B.api.nuevoCuatrimestre_('2C 2027');
+  assert.equal(env._libro.copias.length, 1); assert(r.respaldo.indexOf('1C 2027') > 0);
+  ['Padron', 'Intentos', 'TP', 'TPHistorial', 'Notas'].forEach(n => assert.equal(env._libro.getSheetByName(n).getLastRow(), 1, n));
+  assert(env._libro.getSheetByName('Docentes').getLastRow() > 1 && env._libro.getSheetByName('Preguntas').getLastRow() > 1);
+  assert.equal(L({ accion: 'estado', token: antes.token }).error, 'sesion');
+  assert.equal(L({ accion: 'ingresar', mail: 'camila.rossi@alu.econo.unlp.edu.ar', legajo: '41287/3' }).error, 'acceso');
+  env._libro.getSheetByName('Padron').getRange(2, 1, 2, 7).setValues(padron.slice(0, 2));
+  B.api.limpiarCache();
+  const nueva = L({ accion: 'ingresar', mail: 'camila.rossi@alu.econo.unlp.edu.ar', legajo: '41287/3' });
+  assert(nueva.ok); assert.equal(nueva.cuatrimestre || '2C 2027', '2C 2027');
+  assert.deepEqual(nueva.progreso, {});
+  assert.deepEqual(L({ accion: 'tpLeer', token: nueva.token }).campos, {});
+});
 t('acción desconocida no rompe', () => assert.equal(L({ accion: 'borrarTodo' }).error, 'accion'));
 console.log(`\n${ok} pruebas OK`);

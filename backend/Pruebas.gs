@@ -106,7 +106,7 @@ function pruebaRendimiento() {
     medir('Leer la hoja completa (patrón MBA)', function () { h.getRange(2, 1, h.getLastRow() - 1, 13).getValues(); });
 
     // 5) Caché
-    const cache = CacheService.getScriptCache();
+    const cache = cache_();
     const grande = JSON.stringify(filas.slice(0, 300));
     medir('Caché: guardar ~' + Math.round(grande.length / 1024) + ' KB', function (i) { guardarJson_('bench' + i, grande, 60); });
     medir('Caché: leer ~' + Math.round(grande.length / 1024) + ' KB', function (i) { leerJson_('bench' + i); });
