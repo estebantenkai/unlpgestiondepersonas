@@ -46,6 +46,15 @@ button,input,select,textarea{font:inherit;color:inherit}
 .label{font:600 11px/1.2 var(--f-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--sub)}
 .mark{display:inline-block;background:currentColor;-webkit-mask:var(--src) center/contain no-repeat;mask:var(--src) center/contain no-repeat}
 /*@@LOGOS@@*/
+.cont{margin-bottom:16px;padding:clamp(16px,2.4vw,24px)}
+.cont-h{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap}
+.cont-h h3{margin-top:4px}
+.cont-h .xs{text-align:right}
+.cont-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.cont-e{border-top:1px solid var(--rule-2);padding-top:12px;margin-top:12px}
+.cont-e h4{margin:4px 0 6px}
+.caso-txt p{margin:0 0 10px;max-width:75ch}
+@media(max-width:760px){.cont-g{grid-template-columns:minmax(0,1fr)}.cont-h .xs{text-align:left}}
 .sello{width:28px;height:34px;color:var(--brand)}
 .logo-full{width:220px;height:104px;max-width:100%}
 
@@ -929,12 +938,61 @@ function renderDocente() {
   var m = $('#main');
   m.innerHTML = '<div class="dhead"><div><p class="label">Tablero de la cátedra</p><h2 style="margin-top:6px">' + D.alumnos.length + ' alumnos · ' + D.grupos.length + ' grupos</h2></div>' +
     '<div class="sm sub">' + (D.r.manual || S.manual ? '<a class="btn line sm" href="' + esc(D.r.manual || S.manual) + '" target="_blank" rel="noopener" style="margin-right:8px">Manual de uso ↗</a>' : '<span class="xs faint" style="margin-right:8px">Manual de uso: próximamente</span>') + 'Actualizado ' + hm(D.r.generado) + ' <button class="btn quiet sm" id="refrescar" style="margin-left:6px">Actualizar</button></div></div>' +
-    '<nav class="ntabs" role="tablist">' + [['resumen', 'Resumen'], ['alumnos', 'Alumnos y checkpoints'], ['grupos', 'Grupos y notas del TP'], ['exportar', 'Exportar']].map(function (x) {
+    '<nav class="ntabs" role="tablist">' + [['resumen', 'Resumen'], ['alumnos', 'Alumnos y checkpoints'], ['grupos', 'Grupos y notas del TP'], ['contenido', 'Contenido de la cursada'], ['exportar', 'Exportar']].map(function (x) {
       return '<button role="tab" data-v="' + x[0] + '" aria-selected="' + (vistaDoc === x[0]) + '">' + x[1] + '</button>';
     }).join('') + '</nav><div id="doc-body"></div>';
   $$('.ntabs button', m).forEach(function (b) { b.onclick = function () { vistaDoc = b.dataset.v; renderDocente(); }; });
   $('#refrescar').onclick = function () { this.disabled = true; cargarResumen(true); };
-  ({ resumen: docResumen, alumnos: docAlumnos, grupos: docGrupos, exportar: docExportar })[vistaDoc]();
+  ({ resumen: docResumen, alumnos: docAlumnos, grupos: docGrupos, contenido: docContenido, exportar: docExportar })[vistaDoc]();
+}
+
+/* ---------- Contenido completo (preguntas con la correcta, caso y consignas) ---------- */
+var CONT = null;
+function preguntasHtml(qs) {
+  if (!qs.length) return '<p class="sm faint">Sin preguntas cargadas.</p>';
+  return qs.map(function (q, i) {
+    var cab = '<p><span class="num">' + (i + 1) + '/' + qs.length + '</span><span style="flex:1">' + esc(q.enunciado) + '</span></p>';
+    if (q.tipo !== 'opcion') return '<div class="q">' + cab + '<p class="xs sub">Pregunta abierta: se aprueba al responderla.</p></div>';
+    return '<div class="q">' + cab + q.opciones.map(function (o, j) {
+      var ok = String(j) === String(q.correcta);
+      return '<div class="opt ro' + (ok ? ' c-ok' : '') + '"><span>' + (ok ? '✓' : '') + '</span><span>' + esc(o) + (ok ? '<span class="tag">Correcta</span>' : '') + '</span></div>';
+    }).join('') + '</div>';
+  }).join('');
+}
+function docContenido() {
+  var b = $('#doc-body');
+  if (!CONT) {
+    b.innerHTML = '<p class="sm sub">Cargando el contenido…</p>';
+    api('docContenido', { token: S.token }).then(function (r) {
+      if (!r.ok) { b.innerHTML = '<p class="sm">' + esc(msgError(r)) + '</p>'; return; }
+      CONT = r; if (vistaDoc === 'contenido') docContenido();
+    });
+    return;
+  }
+  var cps = CONT.clases.filter(function (c) { return c.tiene_checkpoint; });
+  var sel = docContenido.sel || 'todo';
+  var opciones = [['todo', 'Todas las clases']].concat(cps.map(function (c) { return [c.clase, 'Clase ' + c.clase]; })).concat([['tp', 'Caso y consignas del TP']]);
+  var clasesHtml = cps.filter(function (c) { return sel === 'todo' || sel === c.clase; }).map(function (c) {
+    return '<section class="card cont">' +
+      '<div class="cont-h"><div><p class="label">Clase ' + esc(c.clase) + (c.unidad ? ' · Unidad ' + esc(c.unidad) : '') + ' · ' + dlarga(c.fecha) + '</p><h3>' + esc(c.tema) + '</h3></div>' +
+      '<p class="xs sub">Abre ' + dlarga(c.abre) + ' ' + hm(c.abre) + '<br>Cierra ' + (c.cierra ? dlarga(c.cierra) : '—') + '</p></div>' +
+      '<div class="cont-g"><div><p class="paso">Teórico · aprueba con ' + Math.min(CONT.minimo, c.teorico.length || CONT.minimo) + ' de ' + (c.teorico.length || 3) + '</p>' + preguntasHtml(c.teorico) + '</div>' +
+      '<div><p class="paso">Cápsula</p><p class="sm" style="margin-bottom:10px"><b>' + esc(c.capsula_titulo || 'Sin título') + '</b><br>' +
+      (c.capsula_url ? '<a href="' + esc(c.capsula_url) + '" target="_blank" rel="noopener">Abrir el video o podcast ↗</a>' : '<span class="faint">Link del video o podcast: pendiente</span>') + '</p>' + preguntasHtml(c.capsula) + '</div></div></section>';
+  }).join('');
+  var tpHtml = (sel === 'todo' || sel === 'tp') ? '<section class="card cont"><p class="label">TP grupal</p><h3>El caso</h3><div class="sm caso-txt">' +
+      esc(CONT.caso || 'Sin caso cargado.').split(/\n\s*\n/).map(function (p) { return '<p>' + p.replace(/\n/g, '<br>') + '</p>'; }).join('') + '</div>' +
+      CONT.entregas.map(function (e) {
+        return '<div class="cont-e"><p class="label">' + (e.entrega === 'F' ? 'Entrega final' : 'Entrega ' + esc(e.entrega)) + ' · clase ' + esc(e.clase) + (e.abre ? ' · abre ' + dlarga(e.abre) : '') + (e.vence ? ' · vence ' + dlarga(e.vence) : '') + '</p><h4>' + esc(e.titulo) + '</h4><p class="sm">' + esc(e.consigna) + '</p></div>';
+      }).join('') + '</section>' : '';
+  b.innerHTML = '<div class="tools"><select id="c-sel" aria-label="Qué ver">' + opciones.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === sel ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
+    '<button class="btn line sm" id="c-pdf">Descargar en PDF</button><span class="xs sub">Las respuestas correctas sólo las ven los docentes.</span></div>' + clasesHtml + tpHtml;
+  $('#c-sel').onchange = function () { docContenido.sel = this.value; docContenido(); };
+  $('#c-pdf').onclick = function () {
+    $('#print-root').innerHTML = '<p class="pmeta">Gestión y Desarrollo de las Personas en las Organizaciones · FCE · UNLP</p><h1>Contenido de la cursada</h1>' +
+      b.innerHTML.replace(/<div class="tools">[\s\S]*?<\/div>/, '');
+    var t0 = document.title; document.title = 'GDPO - Contenido de la cursada'; window.print(); document.title = t0;
+  };
 }
 function docResumen() {
   var t = ahora(), al = D.alumnos, n = al.length || 1;
@@ -1136,6 +1194,7 @@ function arrancar() {
   if (DEMO) {
     var G = window.GDPO_DEMO;
     $('#demo-note').hidden = false; $('#demo-bar').hidden = false;
+    if (window.GDPO_DEMO_MODO === 'abierto') $('#demo-note').textContent = 'Versión de demostración para docentes: todas las clases y entregas están habilitadas, con 150 alumnos ficticios en 30 grupos. Probá como alumno, o entrá por Docentes y mirá la pestaña «Contenido de la cursada» (preguntas con la respuesta correcta, caso y consignas del TP).';
     $('#in-mail').value = G.alumnoDemo.mail; $('#in-leg').value = G.alumnoDemo.legajo;
     $('#d-mail').value = 'brian@econo.unlp.edu.ar'; $('#d-clave').value = 'demo';
     var di = $('#demo-date'); di.value = G.fechaLocal();

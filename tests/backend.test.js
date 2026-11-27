@@ -166,6 +166,16 @@ t('prueba de carga responde sólo con el interruptor activado', () => {
   B.api.limpiarCache();
   assert.equal(L({ accion: 'carga', quien: 'v1' }).error, 'deshabilitado');
 });
+t('docente: contenido completo con respuestas correctas; alumno no puede pedirlo', () => {
+  {
+    const r = L({ accion: 'docContenido', token: doc.token });
+    assert(r.ok); assert.equal(r.clases.filter(c => c.tiene_checkpoint).length, 10);
+    const c2 = r.clases.find(c => c.clase === '2');
+    assert.equal(c2.teorico.length, 3); assert.equal(c2.capsula.length, 3); assert(c2.teorico[0].correcta !== undefined);
+    assert(r.entregas.length > 0); assert(r.caso.length > 50);
+  }
+  assert.equal(L({ accion: 'docContenido', token: cam.token }).error, 'sesion');
+});
 t('nuevo cuatrimestre: respalda, vacía datos de alumnos, cierra sesiones y no arrastra caché', () => {
   const antes = L({ accion: 'ingresar', mail: 'camila.rossi@alu.econo.unlp.edu.ar', legajo: '41287/3' });
   assert(Object.keys(antes.progreso).length > 0);

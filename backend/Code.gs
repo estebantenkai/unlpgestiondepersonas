@@ -207,6 +207,7 @@ function manejar_(p) {
       case 'docResumen':  return json_(docResumen_(p));
       case 'docTP':       return json_(docTP_(p));
       case 'docNota':     return json_(docNota_(p));
+      case 'docContenido':return json_(docContenido_(p));
       case 'carga':       return json_(carga_(p));
       default:            return json_({ ok: false, error: 'accion' });
     }
@@ -537,6 +538,23 @@ function docIngresar_(p) {
 }
 
 /** Todo lo que necesita el tablero, en un solo pedido. Se cachea 60 s para que 10 docentes no multipliquen la carga. */
+/** Todo el contenido de la cursada, con las respuestas correctas: sólo para docentes. */
+function docContenido_(p) {
+  const s = sesion_(p, 'doc');
+  if (!s) return { ok: false, error: 'sesion' };
+  const preg = preguntas_();
+  const clases = cronograma_().map(function (c) {
+    return {
+      clase: c.clase, fecha: c.fecha, unidad: c.unidad, tema: c.tema, abre: c.abre, cierra: c.cierra,
+      tiene_checkpoint: c.tiene_checkpoint, capsula_titulo: c.capsula_titulo, capsula_url: c.capsula_url,
+      teorico: preg[c.clase + '|teorico'] || [], capsula: preg[c.clase + '|capsula'] || []
+    };
+  });
+  const cfg = config_();
+  return { ok: true, clases: clases, entregas: entregasTP_(), caso: desproteger_(cfg.caso_tp || ''),
+           minimo: Number(cfg.minimo_correctas) || 2 };
+}
+
 function docResumen_(p) {
   const s = sesion_(p, 'doc');
   if (!s) return { ok: false, error: 'sesion' };

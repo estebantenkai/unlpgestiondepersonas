@@ -22,6 +22,8 @@
   var demo = { alumnoDemo: { mail: 'camila.rossi@alu.econo.unlp.edu.ar', legajo: '41287/3', dni: '40111222' } };
 
   function rnd(seed) { var s = seed % 2147483647; if (s <= 0) s += 2147483646; return function () { s = s * 16807 % 2147483647; return (s - 1) / 2147483646; }; }
+  var ABIERTO = typeof window !== 'undefined' && window.GDPO_DEMO_MODO === 'abierto';   // demo para docentes: todo habilitado hasta fin de año
+  var FIN_ABIERTO = '2027-12-31 23:59', CLAVE_FECHA = ABIERTO ? 'gdpo-demo-fecha-abierta' : 'gdpo-demo-fecha';
   function local(s) { var p = s.split(/[- :]/).map(Number); return new Date(p[0], p[1] - 1, p[2], p[3] || 0, p[4] || 0).getTime(); }
 
   function padron() {
@@ -52,7 +54,7 @@
       var esDemo = a[0] === demo.alumnoDemo.legajo;
       var empeño = esDemo ? 0.97 : 0.7 + r() * 0.29;
       cps.forEach(function (c) {
-        var abre = local(c[4]), cierra = finU[c[2]] + 16 * 864e5 - 1;
+        var abre = local(c[4]), cierra = ABIERTO ? local(FIN_ABIERTO) : finU[c[2]] + 16 * 864e5 - 1;
         if (ahora < abre) return;
         var tope = Math.min(ahora, cierra);
         var avance = ahora >= cierra ? 1 : Math.min(1, (ahora - abre) / (6 * 864e5));
@@ -81,7 +83,7 @@
     Object.keys(grupos).forEach(function (g) {
       var cumplidor = 0.65 + r() * 0.33, fin = false;
       C.entregasTP.forEach(function (en) {
-        var abre = local(en[4]), vence = local(en[5]) + 20 * 3600e3;
+        var abre = local(en[4]), vence = ABIERTO ? local(FIN_ABIERTO) : local(en[5]) + 20 * 3600e3;
         if (ahora < abre) return;
         var vencida = ahora > vence;
         if (g === 'G07' && !vencida) { if (en[0] !== 'F') tp.push([g + '|e' + en[0], g, 'e' + en[0], '<p>Primer borrador de Tomás. ' + TEXTOS[0] + '</p>', 'Tomás Paz', abre + 3 * 3600e3]); return; }
@@ -112,10 +114,14 @@
     B.api.configurarBitacora();
     var pad = padron();
     sembrarPlanilla(env, C, pad);
+    if (ABIERTO) {
+      env._libro.getSheetByName('Cronograma').filas.forEach(function (f, i) { if (i && f[6] === 'SI') f[5] = FIN_ABIERTO; });
+      env._libro.getSheetByName('EntregasTP').filas.forEach(function (f, i) { if (i) f[5] = FIN_ABIERTO.slice(0, 10); });
+    }
     env._libro.getSheetByName('Config').filas.forEach(function (f) { if (f[0] === 'cuatrimestre') f[1] = '1C 2027 · demo'; });
     simular(ms, pad);
     B.api.limpiarCache();
-    try { localStorage.setItem('gdpo-demo-fecha', String(ms)); } catch (e) {}
+    try { localStorage.setItem(CLAVE_FECHA, String(ms)); } catch (e) {}
   };
   demo.llamar = function (p) { return B.llamar(p); };
   demo.fechaLocal = function () {
@@ -130,7 +136,8 @@
     ['Antes de la entrega final', local('2027-06-14 20:00')],
     ['Fin de cursada', local('2027-07-20 10:00')]
   ];
-  var guardada = null; try { guardada = Number(localStorage.getItem('gdpo-demo-fecha')); } catch (e) {}
-  demo.reiniciar(guardada && guardada > local('2027-03-01') && guardada < local('2027-08-01') ? guardada : local('2027-04-08 10:00'));
+  var guardada = null; try { guardada = Number(localStorage.getItem(CLAVE_FECHA)); } catch (e) {}
+  if (ABIERTO) demo.saltos.push(['Todo habilitado', local('2027-07-01 10:00')]);
+  demo.reiniciar(guardada && guardada > local('2027-03-01') && guardada < local('2027-08-01') ? guardada : local(ABIERTO ? '2027-07-01 10:00' : '2027-04-08 10:00'));
   window.GDPO_DEMO = demo;
 })();
