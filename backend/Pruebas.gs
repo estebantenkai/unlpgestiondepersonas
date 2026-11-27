@@ -23,6 +23,9 @@ function probarBackend() {
     const pc = preguntas_()[c.clase + '|capsula'] || [];
     if (!pt.length) errores.push('Clase ' + c.clase + ': sin preguntas de teórico.');
     if (!pc.length) avisos.push('Clase ' + c.clase + ': sin preguntas de cápsula.');
+    pc.forEach(function (q) {
+      if (q.tipo === 'opcion' && !(Number(q.correcta) >= 0 && Number(q.correcta) < q.opciones.length)) errores.push('Clase ' + c.clase + ' cápsula pregunta ' + q.n + ': "correcta" debe ser el número de opción, empezando en 0.');
+    });
     pt.forEach(function (q) {
       if (q.tipo === 'opcion') {
         const i = Number(q.correcta);
@@ -38,7 +41,6 @@ function probarBackend() {
   legajos.forEach(function (l) {
     const a = pad[l];
     if (!/@/.test(a.mail)) errores.push('Legajo ' + l + ': correo inválido.');
-    if (a.dni.length < 7) errores.push('Legajo ' + l + ': DNI incompleto.');
     if (a.grupo) porGrupo[a.grupo] = (porGrupo[a.grupo] || 0) + 1;
     else avisos.push('Legajo ' + l + ': sin grupo asignado.');
   });
@@ -47,6 +49,7 @@ function probarBackend() {
   if (filasPadron > legajos.length) errores.push('Hay legajos repetidos en el padrón (' + filasPadron + ' filas, ' + legajos.length + ' legajos distintos).');
 
   if (!Object.keys(docentes_()).length) errores.push('No hay docentes cargados.');
+  if (!cfg.clave_docentes || String(cfg.clave_docentes).trim() === 'CAMBIAR') avisos.push('Config › clave_docentes: poné la clave común de los docentes.');
 
   const t = firmar_({ r: 'doc', m: Object.keys(docentes_())[0] || 'x', x: Date.now() + 6e4 });
   if (Object.keys(docentes_()).length && !sesion_({ token: t }, 'doc')) errores.push('La firma de sesiones no funciona.');
@@ -103,7 +106,7 @@ function pruebaRendimiento() {
     medir('Leer la hoja completa (patrón MBA)', function () { h.getRange(2, 1, h.getLastRow() - 1, 13).getValues(); });
 
     // 5) Caché
-    const cache = CacheService.getScriptCache();
+    const cache = cache_();
     const grande = JSON.stringify(filas.slice(0, 300));
     medir('Caché: guardar ~' + Math.round(grande.length / 1024) + ' KB', function (i) { guardarJson_('bench' + i, grande, 60); });
     medir('Caché: leer ~' + Math.round(grande.length / 1024) + ' KB', function (i) { leerJson_('bench' + i); });

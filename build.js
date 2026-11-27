@@ -14,8 +14,14 @@ const demo = [
 let html = leer('src/app.html')
   .replace('/*@@LOGOS@@*/', leer('src/logos.css').trim())
   .replace('<!--@@DEMO@@-->', '<script>\n' + demo.replace(/<\/script/gi, '<\\/script') + '\n</script>');
-fs.writeFileSync(R('index.html'), html);
-console.log('index.html', Math.round(html.length / 1024) + ' KB');
+// Mientras SITIO_REAL sea false, la dirección principal muestra la demo.
+// /app/ está siempre conectada a la planilla real y /demo/ es siempre la demo con todo habilitado (para docentes).
+const SITIO_REAL = false;
+const comoDemo = (h, modo) => h.replace(/var API = '[^']*';/, "var API = '';" + (modo ? " window.GDPO_DEMO_MODO = '" + modo + "';" : ''));
+const escribir = (f, h) => { fs.mkdirSync(path.dirname(R(f)), { recursive: true }); fs.writeFileSync(R(f), h); console.log(f, Math.round(h.length / 1024) + ' KB'); };
+escribir('index.html', SITIO_REAL ? html : comoDemo(html, 'abierto'));
+escribir('app/index.html', html);
+escribir('demo/index.html', comoDemo(html, 'abierto'));
 
 const csv = filas => filas.map(f => f.map(v => { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(',')).join('\n') + '\n';
 const enc = n => ({

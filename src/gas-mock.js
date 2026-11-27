@@ -74,7 +74,9 @@ function crearEntornoGAS(opciones) {
   /* ---------- Planilla ---------- */
   function Hoja(nombre) { this.nombre = nombre; this.filas = []; }
   Hoja.prototype.getLastRow = function () { return this.filas.length; };
+  Hoja.prototype.appendRow = function (f) { this.filas.push(f.slice()); return this; };
   Hoja.prototype.setFrozenRows = function () {};
+  Hoja.prototype.getLastColumn = function () { return this.filas.reduce(function (m, f) { return Math.max(m, f.length); }, 0); };
   Hoja.prototype.setName = function (n) { this.nombre = n; };
   Hoja.prototype.getRange = function (r, c, nr, nc) {
     if (typeof r === 'string') return new Rango(this, 1, 1, 0, 0);
@@ -104,6 +106,11 @@ function crearEntornoGAS(opciones) {
   };
   Rango.prototype.setValue = function (v) { return this.setValues([[v]]); };
   Rango.prototype.setNumberFormat = function () { return this; };
+  Rango.prototype.clearContent = function () {
+    for (var i = 0; i < this.nr; i++) { var f = this.h.filas[this.r - 1 + i]; if (f) for (var j = 0; j < this.nc; j++) f[this.c - 1 + j] = ''; }
+    while (this.h.filas.length > 1 && this.h.filas[this.h.filas.length - 1].every(function (v) { return v === '' || v == null; })) this.h.filas.pop();
+    return this;
+  };
   Rango.prototype.setFontWeight = function () { return this; };
   Rango.prototype.createTextFinder = function (txt) {
     var self = this, entera = false;
@@ -126,6 +133,8 @@ function crearEntornoGAS(opciones) {
   var libro = { hojas: {} };
   libro.getSheetByName = function (n) { return libro.hojas[n] || null; };
   libro.insertSheet = function (n) { return (libro.hojas[n] = new Hoja(n)); };
+  libro.copias = [];
+  libro.copy = function (n) { libro.copias.push(n); return { getUrl: function () { return 'https://docs.google.com/spreadsheets/d/copia'; } }; };
   libro.getSheets = function () { return Object.keys(libro.hojas).map(function (k) { return libro.hojas[k]; }); };
 
   /* ---------- Caché (con vencimiento) ---------- */
@@ -140,11 +149,12 @@ function crearEntornoGAS(opciones) {
     removeAll: function (ks) { ks.forEach(function (k) { delete cacheMem[k]; }); }
   };
 
-  var logs = [];
+  var logs = [], props = {};
   var env = {
     Date: FakeDate,
     SpreadsheetApp: { getActiveSpreadsheet: function () { return libro; }, flush: function () {} },
     CacheService: { getScriptCache: function () { return cache; } },
+    PropertiesService: { getScriptProperties: function () { return { getProperty: function (k) { return props[k] || null; }, setProperty: function (k, v) { props[k] = String(v); } }; } },
     LockService: { getScriptLock: function () { return { tryLock: function () { return true; }, waitLock: function () {}, releaseLock: function () {} }; } },
     Utilities: {
       getUuid: function () { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) { var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }); },
